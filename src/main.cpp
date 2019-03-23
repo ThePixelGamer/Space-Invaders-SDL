@@ -1,52 +1,52 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_video.h"
-#include "chip8.h"
+
 #include <unistd.h>
 #include <algorithm>
 #include <iostream>
 
-#define SCREEN_WIDTH 64
-#define SCREEN_HEIGHT 32
+#define SCREEN_WIDTH 256
+#define SCREEN_HEIGHT 224
 
-using namespace std;
-
-chip8* 				myChip8;
 SDL_Window*		window;
 const Uint8*	state;
 
 void keyboard(bool);
-
-int main(int argc, char* args[]) { 
-	if (argc != 2) {
-		cout << "Usage: chip8 <ROM file>" << endl;
-		return 1;
-  }
+int main(int argc, char* args[]) {
+	for (int i = 0; i < argc; ++i){
+		if(strcmp(args[i], "-s") == 0){
+			std::cout << "Set to server!" << std::endl;
+		}
+		if(strcmp(args[i], "-c") == 0){
+			if(argc > i+1)
+				std::cout << "Connecting to IP: " << args[i+1] << std::endl;
+				//IP = args[i+1];
+			else
+				std::cout << "Connecting to default IP!" << std::endl;
+		}
+		if(strcmp(args[i], "-p") == 0){
+			std::cout << "Setting Port To: " << args[i+1] << std::endl;
+		}
+	}
 
 	SDL_Renderer*				renderer;
 	SDL_Texture*				texture;
-	SDL_Event						event;
-	SDL_AudioSpec				wavSpec;
-	SDL_AudioDeviceID 	deviceId;
-	Uint32							wavLength;
-	Uint8*							wavBuffer;
+	SDL_Event					event;
 	
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_Init(SDL_INIT_AUDIO);
-	SDL_LoadWAV("beep.wav", &wavSpec, &wavBuffer, &wavLength);
 
-	window = SDL_CreateWindow("Chip 8 w/ SDL2", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_FULLSCREEN_DESKTOP); 
+	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_FULLSCREEN_DESKTOP); 
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	deviceId = SDL_OpenAudioDevice(NULL, 0, &wavSpec, NULL, 0);
 
-	myChip8 = new chip8();
-	myChip8->pixels = new Uint32[64 * 32]; 
-	fill_n(myChip8->pixels, (64 * 32), 0);
+	//myChip8 = new chip8();
+	//myChip8->pixels = new Uint32[SCREEN_WIDTH * SCREEN_HEIGHT]; 
+	//fill_n(myChip8->pixels, (SCREEN_WIDTH * SCREEN_HEIGHT), 0);
 	
-	if (!myChip8->load(args[1]))
-        return 2;
+	//Load ROM
 	
-	while(true) {		
+	while(true) {
+		//Handle Updates
 		while(SDL_PollEvent(&event)) {
 			switch(event.type) {
 				case SDL_QUIT:
@@ -65,17 +65,10 @@ int main(int argc, char* args[]) {
 			}
 		}
 		
-		myChip8->emulateCycle();
+		//Tick Engine
 		
-		if(myChip8->drawFlag) {
-			SDL_UpdateTexture(texture, NULL, myChip8->pixels, 64 * sizeof(Uint32));
-		}
-
-		if(myChip8->sound) {
-			int success = SDL_QueueAudio(deviceId, wavBuffer, wavLength);
-			SDL_PauseAudioDevice(deviceId, 0);
-			myChip8->sound = false;
-		}
+		//Push Render
+		//SDL_UpdateTexture(texture, NULL, myChip8->pixels, SCREEN_WIDTH * sizeof(Uint32));
 		
 		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -83,8 +76,6 @@ int main(int argc, char* args[]) {
 		SDL_Delay(2); //"vsync"
 	}
 
-	SDL_CloseAudioDevice(deviceId);
-	SDL_FreeWAV(wavBuffer);
 	SDL_DestroyTexture(texture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window); 
