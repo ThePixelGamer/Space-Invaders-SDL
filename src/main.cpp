@@ -46,7 +46,7 @@ int main(int argc, char* args[]) {
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 	
-	core->pixels = new Uint32[SCREEN_WIDTH * SCREEN_HEIGHT];
+	core->pixels = new uint32_t[SCREEN_WIDTH * SCREEN_HEIGHT]; //change to Uint32 if no worky
 	std::fill_n(core->pixels, (SCREEN_WIDTH * SCREEN_HEIGHT), 0);
 
 	//Load ROM
@@ -71,25 +71,11 @@ int main(int argc, char* args[]) {
 			}
 		}
 
-		if(isGoingOnline){
-			//server
-				//Grab Client Inputs
-				
-				//Handle Client Inputs
-
-				//Tick
-				std::string out = core->emulateCycle();
-
-				//Send opcode to client
-
-			//client
-		} else {
-			core->emulateCycle();
-		}
+		core->emulateCycle();
 		
 		//Push Render
 		if(core->drawFlag)
-			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(Uint32));
+			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint32_t));
 		
 		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
