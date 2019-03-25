@@ -95,6 +95,19 @@ void keyboard(bool press){
 			run = false; //Much Safer Exit :)
 
 		/*
+		0x1  = 0000 0001
+		0x2  = 0000 0010
+		0x4  = 0000 0100
+		0x8  = 0000 1000
+		0x10 = 0001 0000
+		0x20 = 0010 0000
+		0x40 = 0100 0000
+		0x80 = 1000 0000
+		
+		1111 0000
+		1010 1010-
+		0100 0
+
 		0	coin (0 when active)
 		1	P2 start button
 		2	P1 start button
@@ -112,9 +125,9 @@ void keyboard(bool press){
 		6	P2 joystick right
 		7	dipswitch coin info 1:off,0:on
 		*/
-		if(state[SDL_SCANCODE_1]); //READ1 bit1
-		if(state[SDL_SCANCODE_2]); //READ1 bit2
-		if(state[SDL_SCANCODE_SPACE]); //READ1 bit4
+		if(state[SDL_SCANCODE_1]) core->port[0] = (core->port[0] ^ 0x2) + 0x2; //READ1 bit1
+		if(state[SDL_SCANCODE_2]) core->port[0] = (core->port[0] ^ 0x4) + 0x4; //READ1 bit2
+		if(state[SDL_SCANCODE_SPACE]) core->port[0] = (core->port[0] ^ 0x8) + 0x8; //READ1 bit4
 		if(state[SDL_SCANCODE_LEFT]); //READ1 bit5
 		if(state[SDL_SCANCODE_RIGHT]); //READ1 bit6
 
@@ -124,9 +137,9 @@ void keyboard(bool press){
 		if(state[SDL_SCANCODE_PERIOD]); //READ2 bit6
 	}
 	else {
-		if(state[SDL_SCANCODE_1]); //READ1 bit1
-		if(state[SDL_SCANCODE_2]); //READ1 bit2
-		if(state[SDL_SCANCODE_SPACE]); //READ1 bit4
+		if(state[SDL_SCANCODE_1]) core->port[0] ^= 0x2; //READ1 bit1
+		if(state[SDL_SCANCODE_2]) core->port[0] ^= 0x4; //READ1 bit2
+		if(state[SDL_SCANCODE_SPACE]) core->port[0] ^= 0x8; //READ1 bit4
 		if(state[SDL_SCANCODE_LEFT]); //READ1 bit5
 		if(state[SDL_SCANCODE_RIGHT]); //READ1 bit6
 

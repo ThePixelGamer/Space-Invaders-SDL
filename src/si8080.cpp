@@ -41,7 +41,7 @@ void si8080::emulateCycle() {
 					break;
 					
 				case 0x04: //INR B
-					b = checkCond((uint16_t) b + 1);
+					b = checkCond((uint16_t) b + 1, 1, b);
 					break;
 					
 				case 0x05: //3 bytes 1: the instruction 2: the "low data" 3: the "high data"
@@ -64,22 +64,36 @@ void si8080::emulateCycle() {
  
 }
 
-uint8_t si8080::checkCond(uint16_t ans) {
-	cy =
-	s =
+uint8_t si8080::checkCond(uint16_t ans, uint8_t diff, uint8_t old) {
+	cy = (ans > 0xff);
+	ac = checkAC(ans & 0xff, diff, old);
+	s = 0;
 	z = ((ans & 0xff) == 0);
 	p = checkParity(ans & 0xff);
 	return (ans & 0xff);
 }
 
-uint8_t si8080::checkParity(uint16_t ans) {
-	bitset<16> bs(ans);
+uint8_t si8080::checkParity(uint8_t ans) {
+	bitset<8> bs(ans);
 	int count = 0;
 	for(int i = 0; bs.to_string().size(); i++) {
 		if(bs.to_string().substr(i, 1).compare("1") == 0) 
 			count++;
 	}
-	return count % 2;
+
+	return (count % 2 == 1);
+}
+
+uint8_t si8080::checkAC(uint8_t ans, uint8_t diff, uint8_t old) {
+	if(diff > 0) {
+		return (~((old ^ diff) & 0x10) == (ans & 0x10));
+	}
+	else if(diff < 0) {
+		return ((old & 0x8) == 0 && ((diff * -1) & 0x8) == 1);
+	}
+	else {
+		return -1; //shrug
+	}
 }
 
 bool si8080::load(const char* filename) {

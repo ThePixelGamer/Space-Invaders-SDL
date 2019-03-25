@@ -14,14 +14,15 @@ class si8080 {
 public:
 	bool			autoOpcode = true;
 	bool			drawFlag;
-	uint32_t*			pixels;
+	uint32_t*		pixels;
     uint8_t			port[5]; //read 1, read 2, read 3, write 2, write 4
 	
 	si8080();
 
 	void emulateCycle();
-	uint8_t checkCond(uint16_t);
-	uint8_t checkParity(uint16_t);
+	uint8_t checkCond(uint16_t, uint8_t, uint8_t);
+	uint8_t checkParity(uint8_t);
+	uint8_t checkAC(uint8_t, uint8_t, uint8_t);
 	bool load(const char* filename);
 
 private:
