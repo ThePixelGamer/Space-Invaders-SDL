@@ -20,9 +20,9 @@ public:
 	si8080();
 
 	void emulateCycle();
-	uint8_t checkCond(uint16_t, uint8_t, uint8_t);
+	uint16_t setCond(uint32_t, uint16_t, uint16_t, uint8_t);
 	uint8_t checkParity(uint8_t);
-	uint8_t checkAC(uint8_t, uint8_t, uint8_t);
+	uint8_t checkAC(uint8_t, uint16_t, uint16_t);
 	bool load(const char* filename);
 
 private:

@@ -46,7 +46,7 @@ int main(int argc, char* args[]) {
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 	
-	core->pixels = new uint32_t[SCREEN_WIDTH * SCREEN_HEIGHT]; //change to Uint32 if no worky
+	core->pixels = new uint32_t[SCREEN_WIDTH * SCREEN_HEIGHT]; //change to Uint32 if no worky (fuck idiot)
 	std::fill_n(core->pixels, (SCREEN_WIDTH * SCREEN_HEIGHT), 0);
 
 	//Load ROM
@@ -71,6 +71,7 @@ int main(int argc, char* args[]) {
 			}
 		}
 
+		//Tick
 		core->emulateCycle();
 		
 		//Push Render
@@ -103,10 +104,6 @@ void keyboard(bool press){
 		0x20 = 0010 0000
 		0x40 = 0100 0000
 		0x80 = 1000 0000
-		
-		1111 0000
-		1010 1010-
-		0100 0
 
 		0	coin (0 when active)
 		1	P2 start button
@@ -127,25 +124,25 @@ void keyboard(bool press){
 		*/
 		if(state[SDL_SCANCODE_1]) core->port[0] = (core->port[0] ^ 0x2) + 0x2; //READ1 bit1
 		if(state[SDL_SCANCODE_2]) core->port[0] = (core->port[0] ^ 0x4) + 0x4; //READ1 bit2
-		if(state[SDL_SCANCODE_SPACE]) core->port[0] = (core->port[0] ^ 0x8) + 0x8; //READ1 bit4
-		if(state[SDL_SCANCODE_LEFT]); //READ1 bit5
-		if(state[SDL_SCANCODE_RIGHT]); //READ1 bit6
+		if(state[SDL_SCANCODE_SPACE]) core->port[0] = (core->port[0] ^ 0x10) + 0x10; //READ1 bit4
+		if(state[SDL_SCANCODE_LEFT]) core->port[0] = (core->port[0] ^ 0x20) + 0x20; //READ1 bit5
+		if(state[SDL_SCANCODE_RIGHT]) core->port[0] = (core->port[0] ^ 0x40) + 0x40; //READ1 bit6
 
-		if(state[SDL_SCANCODE_LSHIFT]); //READ2 bit2
-		if(state[SDL_SCANCODE_LALT]); //READ2 bit4
-		if(state[SDL_SCANCODE_COMMA]); //READ2 bit5
-		if(state[SDL_SCANCODE_PERIOD]); //READ2 bit6
+		if(state[SDL_SCANCODE_LSHIFT]) core->port[1] = (core->port[1] ^ 0x4) + 0x4; //READ2 bit2
+		if(state[SDL_SCANCODE_LALT]) core->port[1] = (core->port[1] ^ 0x10) + 0x10; //READ2 bit4
+		if(state[SDL_SCANCODE_COMMA]) core->port[1] = (core->port[1] ^ 0x20) + 0x20; //READ2 bit5
+		if(state[SDL_SCANCODE_PERIOD]) core->port[1] = (core->port[1] ^ 0x40) + 0x40; //READ2 bit6
 	}
 	else {
 		if(state[SDL_SCANCODE_1]) core->port[0] ^= 0x2; //READ1 bit1
 		if(state[SDL_SCANCODE_2]) core->port[0] ^= 0x4; //READ1 bit2
-		if(state[SDL_SCANCODE_SPACE]) core->port[0] ^= 0x8; //READ1 bit4
-		if(state[SDL_SCANCODE_LEFT]); //READ1 bit5
-		if(state[SDL_SCANCODE_RIGHT]); //READ1 bit6
+		if(state[SDL_SCANCODE_SPACE]) core->port[0] ^= 0x10; //READ1 bit4
+		if(state[SDL_SCANCODE_LEFT]) core->port[0] ^= 0x20; //READ1 bit5
+		if(state[SDL_SCANCODE_RIGHT]) core->port[0] ^= 0x40; //READ1 bit6
 
-		if(state[SDL_SCANCODE_LSHIFT]); //READ2 bit2
-		if(state[SDL_SCANCODE_LALT]); //READ2 bit4
-		if(state[SDL_SCANCODE_COMMA]); //READ2 bit5
-		if(state[SDL_SCANCODE_PERIOD]); //READ2 bit6
+		if(state[SDL_SCANCODE_LSHIFT]) core->port[1] ^= 0x4; //READ2 bit2
+		if(state[SDL_SCANCODE_LALT]) core->port[1] ^= 0x10; //READ2 bit4
+		if(state[SDL_SCANCODE_COMMA]) core->port[1] ^= 0x20; //READ2 bit5
+		if(state[SDL_SCANCODE_PERIOD]) core->port[1] ^= 0x40; //READ2 bit6
 	}
 }
