@@ -43,7 +43,7 @@ void si8080::emulateCycle() {
 			break;
 			
 		case 0x05: //DCR B
-			b = (setCond((uint32_t) b - 1, -1, b, 0xf)) & 0xff;	
+			b = (setCond((uint32_t) b - 1, 1, b, 0xf)) & 0xff;	
 			break;
 
 		case 0x06: //MVI B, D8
@@ -85,7 +85,7 @@ void si8080::emulateCycle() {
 			break;
 			
 		case 0x0d: //DCR C
-			c = (setCond((uint32_t) c - 1, -1, c, 0xf)) & 0xff;	
+			c = (setCond((uint32_t) c - 1, 1, c, 0xf)) & 0xff;	
 			break;
 			
 		case 0x0e: //MVI C,D8
@@ -810,6 +810,7 @@ void si8080::emulateCycle() {
 }
 
 //flags - 0xf:ac,s,z,p  0x10:cy  0x1f:cy,ac,s,z,p
+//also make sure diff is the thing you're adding/subtracting from the original (so the thing right of the operation)
 uint16_t si8080::setCond(uint32_t ans, uint16_t diff, uint16_t old, uint8_t flags) {
 	if(flags & 0x10 == 0x10)
 		cy = (ans > 0xff);
@@ -835,15 +836,15 @@ uint8_t si8080::checkParity(uint8_t ans) {
 }
 
 uint8_t si8080::checkAC(uint8_t ans, uint16_t diff, uint16_t old) {
-	if(diff > 0) {
+	/*if(ans >= old) { //pos
 		return (~((old ^ diff) & 0x10) == (ans & 0x10));
 	}
-	else if(diff < 0) {
-		return ((old & 0x8) == 0 && ((diff * -1) & 0x8) == 1);
-	}
-	else {
-		return -1; //shrug
-	}
+	else { //neg
+		return ((old & 0x8) == 0 && (diff & 0x8) == 1);
+	}*/
+
+	//the above is my own personal way of doing it but somebody showed me a much simplier way so I decided to use that instead
+	return ((old ^ diff ^ ans) & 0x10 == 0x10)
 }
 
 bool si8080::load(const char* filename) {
