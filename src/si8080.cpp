@@ -35,35 +35,8 @@ si8080::si8080() {
 
 	pixels = new uint32_t[256 * 224]; 
 
-	for(int x = 0; x < 224; x++) { 
-		for(int y = 0; y < 256; y++) { //2400, 2401.. bottom left to upper left then next row
-			if(y < 16) {
-				if(x < 16) {
-					pixels[(x*256) + y] = 0xFFFFFFFF; //white 
-				}
-				else if(x < 118) {
-					pixels[(x*256) + y] = 0x00FF00FF; //green
-				}
-				else if(x < 224) {
-					pixels[(x*256) + y] = 0xFFFFFFFF; //white
-				}
-			
-			}
-			else if(y < 72) {
-				pixels[(x*256) + y] = 0x00FF00FF; //green
-			}
-			else if(y < 192) {
-				pixels[(x*256) + y] = 0xFFFFFFFF; //white
-			}
-			else if(y < 224) {
-				pixels[(x*256) + y] = 0xFF0000FF; //red
-			}
-			else if(y < 256) {
-				pixels[(x*256) + y] = 0xFFFFFFFF; //white
-			}
-			else
-				pixels[(x*256) + y] = 0x00000000; //black
-		}
+	for(int i = 0; i < 256 * 224; i++) {
+		pixels[i] = 0x00000000; //black
 	}
 
 	for(int i = 0; i < 4096 * 2; i++)
@@ -90,7 +63,7 @@ void si8080::emulateCycle() {
 	cout << "PC: ";
 	cout << dec << +pc;
 	cout << "\tSP: ";
-	cout << +sp;
+	cout << hex << +sp;
 	cout << "\tA: ";
 	cout << +a;
 	cout << "\tB: ";
@@ -337,8 +310,15 @@ void si8080::emulateCycle() {
 			break;
 
 		case 0x36: //MVI M,D8
-			memory[(((uint16_t) h << 8) + l)] = memory[pc+1];
+		{
+			int loc = (((uint16_t) h << 8) + l);
+			if(loc >= 0x2400 && loc < 0x4000)
+				vramChange(memory[pc+1]);
+			
+			memory[loc] = memory[pc+1];
+			
 			pc += 1;
+		}
 			break;
 
 		case 0x37: //not done
@@ -687,7 +667,9 @@ void si8080::emulateCycle() {
 		case 0xa6: //not done
 			break;
 
-		case 0xa7: //not done
+		case 0xa7: //ANA A
+			a = (setCond((uint8_t) a & a, a, a, 0xf)) & 0xff;
+			cy = 0;
 			break;
 
 		case 0xa8: //not done
@@ -711,7 +693,9 @@ void si8080::emulateCycle() {
 		case 0xae: //not done
 			break;
 
-		case 0xaf: //not done
+		case 0xaf: //XRA A
+			a = (setCond((uint8_t) a ^ a, a, a, 0xf)) & 0xff;
+			cy = 0;
 			break;
 
 		case 0xb0: //not done
@@ -765,14 +749,20 @@ void si8080::emulateCycle() {
 		case 0xc0: //not done
 			break;
 
-		case 0xc1: //not done
+		case 0xc1: //POP B
+			c = memory[sp];
+			b = memory[sp+1];
+			sp += 2;
 			break;
 
-		case 0xc2: //not done
+		case 0xc2: //JNZ adr
+			if(!z)
+				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1];
 			pc += 2;
 			break;
 
-		case 0xc3: //not done
+		case 0xc3: //JMP adr
+			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1];
 			pc += 2;
 			break;
 
@@ -780,10 +770,14 @@ void si8080::emulateCycle() {
 			pc += 2;
 			break;
 
-		case 0xc5: //not done
+		case 0xc5: //PUSH B
+			memory[sp-2] = c;
+			memory[sp-1] = b;
+			sp -= 2;
 			break;
 
-		case 0xc6: //not done
+		case 0xc6: //ADI D8
+			a = (setCond((uint8_t) a + memory[pc+1], memory[pc+1], a, 0x1f)) & 0xff;
 			pc += 1;
 			break;
 
@@ -793,7 +787,9 @@ void si8080::emulateCycle() {
 		case 0xc8: //not done
 			break;
 
-		case 0xc9: //not done
+		case 0xc9: //RET
+			pc = (memory[sp+1] << 8) + memory[sp];
+			sp += 2;
 			break;
 
 		case 0xca: //not done
@@ -1010,6 +1006,29 @@ uint8_t si8080::checkAC(uint8_t ans, uint16_t diff, uint16_t old) {
 }
 
 //I won't use this but it's to remind me that I need to make a copy of vram in order to use sdl effortlessly and maybe do some cool color stuff
-void convert8bVRAMto32b(uint8_t value, uint16_t loc/*probably not necessary with h&l*/) {
-	//pixels[loc] = value;
+void si8080::vramChange(uint8_t value) {
+	uint16_t loc = ((uint16_t) h << 8) + l;
+	int x = loc / 256;
+	int y = loc - (x*256);
+	
+	if(y < 16) {
+		if(x < 16) 
+			pixels[(x*256) + y] = 0xFFFFFFFF; //white 
+		else if(x < 118) 
+			pixels[(x*256) + y] = 0x00FF00FF; //green
+		else if(x < 224) 
+			pixels[(x*256) + y] = 0xFFFFFFFF; //white
+	}
+	else if(y < 72)
+		pixels[(x*256) + y] = 0x00FF00FF; //green
+	else if(y < 192)
+		pixels[(x*256) + y] = 0xFFFFFFFF; //white
+	else if(y < 224)
+		pixels[(x*256) + y] = 0xFF0000FF; //red
+	else if(y < 256)
+		pixels[(x*256) + y] = 0xFFFFFFFF; //white
+	else
+		pixels[(x*256) + y] = 0x00000000; //black
+	
+	drawFlag = true;
 } 
