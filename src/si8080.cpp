@@ -33,8 +33,38 @@ si8080::si8080() {
 	pc = 0x0;	
 	sp = 0x2400;	
 
-	for(int i = 0; i < 256 * 224; i++)
-		pixels[i] = 0;
+	pixels = new uint32_t[256 * 224]; 
+
+	for(int x = 0; x < 224; x++) { 
+		for(int y = 0; y < 256; y++) { //2400, 2401.. bottom left to upper left then next row
+			if(y < 16) {
+				if(x < 16) {
+					pixels[(x*256) + y] = 0xFFFFFFFF; //white 
+				}
+				else if(x < 118) {
+					pixels[(x*256) + y] = 0x00FF00FF; //green
+				}
+				else if(x < 224) {
+					pixels[(x*256) + y] = 0xFFFFFFFF; //white
+				}
+			
+			}
+			else if(y < 72) {
+				pixels[(x*256) + y] = 0x00FF00FF; //green
+			}
+			else if(y < 192) {
+				pixels[(x*256) + y] = 0xFFFFFFFF; //white
+			}
+			else if(y < 224) {
+				pixels[(x*256) + y] = 0xFF0000FF; //red
+			}
+			else if(y < 256) {
+				pixels[(x*256) + y] = 0xFFFFFFFF; //white
+			}
+			else
+				pixels[(x*256) + y] = 0x00000000; //black
+		}
+	}
 
 	for(int i = 0; i < 4096 * 2; i++)
 		memory[i] = 0;	
@@ -527,7 +557,7 @@ void si8080::emulateCycle() {
 			break;
 
 		case 0x7c: //MOV A,H
-			a = H;
+			a = h;
 			break;
 
 		case 0x7d: //not done
@@ -981,5 +1011,5 @@ uint8_t si8080::checkAC(uint8_t ans, uint16_t diff, uint16_t old) {
 
 //I won't use this but it's to remind me that I need to make a copy of vram in order to use sdl effortlessly and maybe do some cool color stuff
 void convert8bVRAMto32b(uint8_t value, uint16_t loc/*probably not necessary with h&l*/) {
-	pixels[loc] = value;
+	//pixels[loc] = value;
 } 

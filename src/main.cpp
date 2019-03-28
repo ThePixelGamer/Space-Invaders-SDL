@@ -7,8 +7,8 @@
 
 #include "si8080.h"
 
-#define SCREEN_WIDTH 256
-#define SCREEN_HEIGHT 224
+#define SCREEN_HEIGHT 256
+#define SCREEN_WIDTH 224
 
 SDL_Window*		window;
 const Uint8*	state;
@@ -23,9 +23,9 @@ int main(int argc, char* args[]) {
 	
 	SDL_Init(SDL_INIT_VIDEO);
 
-	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
+	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_HEIGHT, SCREEN_HEIGHT, SDL_WINDOW_ALWAYS_ON_TOP);
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_HEIGHT, SCREEN_WIDTH);
 
 	while(run) {
 		//Handle Updates
@@ -46,13 +46,14 @@ int main(int argc, char* args[]) {
 					break;
 			}
 		}
-
-		//Tick
 		
-		SDL_UpdateTexture(texture, NULL, core->memory[0x2400], SCREEN_WIDTH * sizeof(uint32_t));
+		//Tick
+		core->emulateCycle();
+	
+		SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_HEIGHT * sizeof(uint32_t));
 		
 		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, NULL, NULL);
+		SDL_RenderCopyEx(renderer, texture, NULL, NULL, -90, NULL, SDL_FLIP_NONE);
 		SDL_RenderPresent(renderer);
 	}
 
@@ -70,7 +71,6 @@ void keyboard(bool press){
 
 		
 		
-		if(state[SDL_SCANCODE_SPACE]) core->emulateCycle();
 		// if(state[SDL_SCANCODE_1]) core->port[0] = (core->port[0] ^ 0x2) + 0x2; //READ1 bit1
 		// if(state[SDL_SCANCODE_2]) core->port[0] = (core->port[0] ^ 0x4) + 0x4; //READ1 bit2
 		// if(state[SDL_SCANCODE_SPACE]) core->port[0] = (core->port[0] ^ 0x10) + 0x10; //READ1 bit4

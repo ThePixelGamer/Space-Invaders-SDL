@@ -13,7 +13,7 @@ using namespace std;
 class si8080 {
 public:
 	bool			drawFlag;
-	uint32_t		pixels[256 * 224];      //duplicate of vram but in 32 rgba format
+	uint32_t*		pixels;      //duplicate of vram but in 32 rgba format
     uint8_t			port[5];                //read 1, read 2, read 3, write 2, write 4
 	
 	si8080();
@@ -22,7 +22,7 @@ public:
 	uint16_t        setCond(uint16_t, uint16_t, uint16_t, uint8_t);
 	uint8_t         checkParity(uint8_t);
 	uint8_t         checkAC(uint8_t, uint16_t, uint16_t);
-	void            convert8bVRAMto32b(uint8_t, uint16_t, uint16_t);    //probably a really dumb way to do it
+	void            convert8bVRAMto32b(uint8_t);    //probably a really dumb way to do it
 
 private:
     uint8_t         a, b, c, d, e, h, l;   //registers
