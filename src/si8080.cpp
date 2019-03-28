@@ -151,7 +151,7 @@ void si8080::emulateCycle() {
 			break;
 			
 		case 0x0e: //MVI C,D8
-			c = memory[1];
+			c = memory[pc+1];
 			pc += 1;	
 			break;
 			
@@ -199,10 +199,16 @@ void si8080::emulateCycle() {
 		case 0x17: //not done
 			break;
 
-		case 0x19: //not done
+		case 0x19: //DAD D
+		{
+			uint16_t tmp = setCond((((uint16_t) d << 8) + e) + (((uint16_t) h << 8) + l), ((uint16_t) d << 8) + e, ((uint16_t) h << 8) + l, 0x10);
+			h = (tmp & 0xff00) >> 8;
+			l = tmp & 0xff;
+		}
 			break;
 
-		case 0x1a: //not done
+		case 0x1a: //LDAX D
+			a = memory[(d << 8) + e];
 			break;
 
 		case 0x1b: //not done
@@ -221,7 +227,9 @@ void si8080::emulateCycle() {
 		case 0x1f: //not done
 			break;
 
-		case 0x21: //not done
+		case 0x21: //LXI H,D16
+			l = memory[pc+1];
+			h = memory[pc+2];
 			pc += 2;
 			break;
 
@@ -229,7 +237,12 @@ void si8080::emulateCycle() {
 			pc += 2;
 			break;
 
-		case 0x23: //not done
+		case 0x23: //INX H
+		{
+			uint16_t tmp = ((uint16_t) h << 8) + (l + 1);
+			l = (tmp & 0xff);
+			h = (tmp >> 8);
+		}
 			break;
 
 		case 0x24: //not done
@@ -238,7 +251,8 @@ void si8080::emulateCycle() {
 		case 0x25: //not done
 			break;
 
-		case 0x26: //not done
+		case 0x26: //MVI H,D8
+			h = memory[pc+1];
 			pc += 1;
 			break;
 
@@ -273,11 +287,13 @@ void si8080::emulateCycle() {
 		case 0x2f: //not done
 			break;
 
-		case 0x31: //not done
+		case 0x31: //LXI SP,D16
+			sp = (((uint16_t) memory[pc+2] << 8) + memory[pc+1]);
 			pc += 2;
 			break;
 
-		case 0x32: //not done
+		case 0x32: //STA adr
+			memory[(((uint16_t)memory[pc+2] << 8) + memory[pc+1])] = a;
 			pc += 2;
 			break;
 
@@ -290,7 +306,8 @@ void si8080::emulateCycle() {
 		case 0x35: //not done
 			break;
 
-		case 0x36: //not done
+		case 0x36: //MVI M,D8
+			memory[(((uint16_t) h << 8) + l)] = memory[pc+1];
 			pc += 1;
 			break;
 
@@ -300,7 +317,8 @@ void si8080::emulateCycle() {
 		case 0x39: //not done
 			break;
 
-		case 0x3a: //not done
+		case 0x3a: //LDA adr
+			a = memory[(((uint16_t)memory[pc+2] << 8) + memory[pc+1])];
 			pc += 2;
 			break;
 
@@ -313,14 +331,15 @@ void si8080::emulateCycle() {
 		case 0x3d: //not done
 			break;
 
-		case 0x3e: //not done
+		case 0x3e: //MVI A,D8
+			a = memory[pc+1];
 			pc += 1;
 			break;
 
 		case 0x3f: //not done
 			break;
 
-		case 0x40: //not done
+		case 0x40: //MOV B,B
 			break;
 
 		case 0x41: //not done
@@ -386,7 +405,8 @@ void si8080::emulateCycle() {
 		case 0x55: //not done
 			break;
 
-		case 0x56: //not done
+		case 0x56: //MOV D,M
+			d = memory[(((uint16_t) h << 8) + l)];
 			break;
 
 		case 0x57: //not done
@@ -410,7 +430,8 @@ void si8080::emulateCycle() {
 		case 0x5d: //not done
 			break;
 
-		case 0x5e: //not done
+		case 0x5e: //MOV E,M
+			e = memory[(((uint16_t) h << 8) + l)];
 			break;
 
 		case 0x5f: //not done
@@ -434,7 +455,8 @@ void si8080::emulateCycle() {
 		case 0x65: //not done
 			break;
 
-		case 0x66: //not done
+		case 0x66: //MOV H,M
+			h = memory[(((uint16_t) h << 8) + l)];
 			break;
 
 		case 0x67: //not done
@@ -461,7 +483,8 @@ void si8080::emulateCycle() {
 		case 0x6e: //not done
 			break;
 
-		case 0x6f: //not done
+		case 0x6f: //MOV L,A
+			l = a;
 			break;
 
 		case 0x70: //not done
@@ -485,7 +508,8 @@ void si8080::emulateCycle() {
 		case 0x76: //not done
 			break;
 
-		case 0x77: //not done
+		case 0x77: //MOV M,A
+			memory[(((uint16_t) h << 8) + l)] = a;
 			break;
 
 		case 0x78: //not done
@@ -494,19 +518,23 @@ void si8080::emulateCycle() {
 		case 0x79: //not done
 			break;
 
-		case 0x7a: //not done
+		case 0x7a: //MOV A,D
+			a = d;
 			break;
 
-		case 0x7b: //not done
+		case 0x7b: //MOV A,E
+			a = e;
 			break;
 
-		case 0x7c: //not done
+		case 0x7c: //MOV A,H
+			a = H;
 			break;
 
 		case 0x7d: //not done
 			break;
 
-		case 0x7e: //not done
+		case 0x7e: //MOV H,M
+			a = memory[(((uint16_t) h << 8) + l)];
 			break;
 
 		case 0x7f: //not done
@@ -920,7 +948,7 @@ uint16_t si8080::setCond(uint16_t ans, uint16_t diff, uint16_t old, uint8_t flag
 		cy = (ans > 0xff);
 	if((flags & 0xf) == 0xf) {
 		ac = checkAC(ans & 0xff, diff, old);
-		s = 0; //not done
+		s = ((ans & 0x80) != 0);
 		z = ((ans & 0xff) == 0);
 		p = checkParity(ans & 0xff);
 	}
