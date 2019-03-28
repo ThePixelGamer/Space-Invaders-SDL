@@ -14,43 +14,19 @@ SDL_Window*		window;
 const Uint8*	state;
 si8080* core = new si8080();
 bool run = true;
-bool isGoingOnline = false;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
-	for (int i = 0; i < argc; ++i){
-		if(strcmp(args[i], "-s") == 0){
-			std::cout << "Set to server!" << std::endl;
-			isGoingOnline = true;
-		}
-		if(strcmp(args[i], "-c") == 0){
-			isGoingOnline = true;
-			if(argc > i+1)
-				std::cout << "Connecting to IP: " << args[i+1] << std::endl;
-				//IP = args[i+1];
-			else
-				std::cout << "Connecting to default IP!" << std::endl;
-		}
-		if(strcmp(args[i], "-p") == 0){
-			std::cout << "Setting Port To: " << args[i+1] << std::endl;
-		}
-	}
-
 	SDL_Renderer*				renderer;
 	SDL_Texture*				texture;
 	SDL_Event					event;
 	
 	SDL_Init(SDL_INIT_VIDEO);
 
-	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED);
+	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	
-	core->pixels = new uint32_t[SCREEN_WIDTH * SCREEN_HEIGHT]; //change to Uint32 if no worky (fuck idiot)
-	std::fill_n(core->pixels, (SCREEN_WIDTH * SCREEN_HEIGHT), 0);
 
-	//Load ROM
-	
 	while(run) {
 		//Handle Updates
 		while(SDL_PollEvent(&event)) {
@@ -72,11 +48,8 @@ int main(int argc, char* args[]) {
 		}
 
 		//Tick
-		core->emulateCycle();
 		
-		//Push Render
-		if(core->drawFlag)
-			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint32_t));
+		SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint32_t));
 		
 		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -95,7 +68,35 @@ void keyboard(bool press){
 		if(state[SDL_SCANCODE_ESCAPE])
 			run = false; //Much Safer Exit :)
 
-		/*
+		
+		
+		if(state[SDL_SCANCODE_SPACE]) core->emulateCycle();
+		// if(state[SDL_SCANCODE_1]) core->port[0] = (core->port[0] ^ 0x2) + 0x2; //READ1 bit1
+		// if(state[SDL_SCANCODE_2]) core->port[0] = (core->port[0] ^ 0x4) + 0x4; //READ1 bit2
+		// if(state[SDL_SCANCODE_SPACE]) core->port[0] = (core->port[0] ^ 0x10) + 0x10; //READ1 bit4
+		// if(state[SDL_SCANCODE_LEFT]) core->port[0] = (core->port[0] ^ 0x20) + 0x20; //READ1 bit5
+		// if(state[SDL_SCANCODE_RIGHT]) core->port[0] = (core->port[0] ^ 0x40) + 0x40; //READ1 bit6
+
+		// if(state[SDL_SCANCODE_LSHIFT]) core->port[1] = (core->port[1] ^ 0x4) + 0x4; //READ2 bit2
+		// if(state[SDL_SCANCODE_LALT]) core->port[1] = (core->port[1] ^ 0x10) + 0x10; //READ2 bit4
+		// if(state[SDL_SCANCODE_COMMA]) core->port[1] = (core->port[1] ^ 0x20) + 0x20; //READ2 bit5
+		// if(state[SDL_SCANCODE_PERIOD]) core->port[1] = (core->port[1] ^ 0x40) + 0x40; //READ2 bit6
+	}
+	else {
+		// if(state[SDL_SCANCODE_1]) core->port[0] ^= 0x2; //READ1 bit1
+		// if(state[SDL_SCANCODE_2]) core->port[0] ^= 0x4; //READ1 bit2
+		// if(state[SDL_SCANCODE_SPACE]) core->port[0] ^= 0x10; //READ1 bit4
+		// if(state[SDL_SCANCODE_LEFT]) core->port[0] ^= 0x20; //READ1 bit5
+		// if(state[SDL_SCANCODE_RIGHT]) core->port[0] ^= 0x40; //READ1 bit6
+
+		// if(state[SDL_SCANCODE_LSHIFT]) core->port[1] ^= 0x4; //READ2 bit2
+		// if(state[SDL_SCANCODE_LALT]) core->port[1] ^= 0x10; //READ2 bit4
+		// if(state[SDL_SCANCODE_COMMA]) core->port[1] ^= 0x20; //READ2 bit5
+		// if(state[SDL_SCANCODE_PERIOD]) core->port[1] ^= 0x40; //READ2 bit6
+	}
+}
+
+/*
 		0x1  = 0000 0001
 		0x2  = 0000 0010
 		0x4  = 0000 0100
@@ -121,28 +122,4 @@ void keyboard(bool press){
 		5	P2 joystick left
 		6	P2 joystick right
 		7	dipswitch coin info 1:off,0:on
-		*/
-		if(state[SDL_SCANCODE_1]) core->port[0] = (core->port[0] ^ 0x2) + 0x2; //READ1 bit1
-		if(state[SDL_SCANCODE_2]) core->port[0] = (core->port[0] ^ 0x4) + 0x4; //READ1 bit2
-		if(state[SDL_SCANCODE_SPACE]) core->port[0] = (core->port[0] ^ 0x10) + 0x10; //READ1 bit4
-		if(state[SDL_SCANCODE_LEFT]) core->port[0] = (core->port[0] ^ 0x20) + 0x20; //READ1 bit5
-		if(state[SDL_SCANCODE_RIGHT]) core->port[0] = (core->port[0] ^ 0x40) + 0x40; //READ1 bit6
-
-		if(state[SDL_SCANCODE_LSHIFT]) core->port[1] = (core->port[1] ^ 0x4) + 0x4; //READ2 bit2
-		if(state[SDL_SCANCODE_LALT]) core->port[1] = (core->port[1] ^ 0x10) + 0x10; //READ2 bit4
-		if(state[SDL_SCANCODE_COMMA]) core->port[1] = (core->port[1] ^ 0x20) + 0x20; //READ2 bit5
-		if(state[SDL_SCANCODE_PERIOD]) core->port[1] = (core->port[1] ^ 0x40) + 0x40; //READ2 bit6
-	}
-	else {
-		if(state[SDL_SCANCODE_1]) core->port[0] ^= 0x2; //READ1 bit1
-		if(state[SDL_SCANCODE_2]) core->port[0] ^= 0x4; //READ1 bit2
-		if(state[SDL_SCANCODE_SPACE]) core->port[0] ^= 0x10; //READ1 bit4
-		if(state[SDL_SCANCODE_LEFT]) core->port[0] ^= 0x20; //READ1 bit5
-		if(state[SDL_SCANCODE_RIGHT]) core->port[0] ^= 0x40; //READ1 bit6
-
-		if(state[SDL_SCANCODE_LSHIFT]) core->port[1] ^= 0x4; //READ2 bit2
-		if(state[SDL_SCANCODE_LALT]) core->port[1] ^= 0x10; //READ2 bit4
-		if(state[SDL_SCANCODE_COMMA]) core->port[1] ^= 0x20; //READ2 bit5
-		if(state[SDL_SCANCODE_PERIOD]) core->port[1] ^= 0x40; //READ2 bit6
-	}
-}
+*/
