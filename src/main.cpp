@@ -49,7 +49,7 @@ int main(int argc, char* args[]) {
 
 		//Tick
 		
-		SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint32_t));
+		SDL_UpdateTexture(texture, NULL, core->memory[0x2400], SCREEN_WIDTH * sizeof(uint32_t));
 		
 		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);

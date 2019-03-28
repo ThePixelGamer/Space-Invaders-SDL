@@ -978,3 +978,8 @@ uint8_t si8080::checkAC(uint8_t ans, uint16_t diff, uint16_t old) {
 	//the above is my own personal way of doing it but somebody showed me a much simplier way so I decided to use that instead
 	return (((old ^ diff ^ ans) & 0x10) == 0x10);
 }
+
+//I won't use this but it's to remind me that I need to make a copy of vram in order to use sdl effortlessly and maybe do some cool color stuff
+void convert8bVRAMto32b(uint8_t value, uint16_t loc/*probably not necessary with h&l*/) {
+	pixels[loc] = value;
+} 
