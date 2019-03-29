@@ -46,19 +46,16 @@ int main(int argc, char* args[]) {
 					break;
 			}
 		}
-
+		
 		//Tick
 		core->emulateCycle();
-
-		//if(core->drawFlag) {
+		if(core->drawFlag) {
 			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_HEIGHT * sizeof(uint32_t));
 			SDL_RenderClear(renderer);
 			SDL_RenderCopyEx(renderer, texture, NULL, NULL, -90, NULL, SDL_FLIP_NONE);
 			SDL_RenderPresent(renderer);
-			
 			//core->drawFlag = false;
-			cout << core->pixels[100];
-		//}
+		}
 	}
 
 	SDL_DestroyTexture(texture);

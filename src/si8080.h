@@ -32,7 +32,7 @@ private:
     uint8_t         cy, ac, s, z, p;       //conditions
 
 	uint16_t        pc, sp;                //counter + stack pointer
-	uint8_t         memory[4000 * 2];      //4kb + a mirror of it ¯\_(ツ)_/¯
+	uint8_t         memory[0x4000 * 2];      //4kb + a mirror of it ¯\_(ツ)_/¯
 
     uint8_t         interrupt;		
 };  

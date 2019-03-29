@@ -41,7 +41,7 @@ si8080::si8080() {
 		pixels[i] = 0x000000FF; //black
 	}
 
-	for(int i = 0; i < 4096 * 2; i++)
+	for(int i = 0; i < 0x4000 * 2; i++)
 		memory[i] = 0;	
 
 	for(int i = 0; i < 2048; i++) {
@@ -315,8 +315,8 @@ void si8080::emulateCycle() {
 		case 0x36: //MVI M,D8
 		{
 			int loc = (((uint16_t) h << 8) + l);
-			//if(loc >= 0x2400 && loc < 0x4000 || loc >= 0x6400 && loc < 0x8000)
-				//vramChange(memory[pc+1]);
+			if((loc >= 0x2400 && loc < 0x4000) || (loc >= 0x6400 && loc < 0x8000))
+				vramChange(memory[pc+1]);
 			
 			memory[loc] = memory[pc+1];
 			
@@ -1075,7 +1075,7 @@ the above is my own personal way of doing it but somebody showed me a much simpl
 */
 
 void si8080::vramChange(uint8_t value) {
-	cout << "called" << endl;
+	cout << dec << value << endl; 
 	uint16_t loc = ((uint16_t) h << 8) + l;
 	int x = loc / 256;
 	int y = loc - (x*256);
