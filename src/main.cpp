@@ -23,7 +23,7 @@ int main(int argc, char* args[]) {
 	
 	SDL_Init(SDL_INIT_VIDEO);
 
-	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_HEIGHT, SCREEN_HEIGHT, SDL_WINDOW_ALWAYS_ON_TOP);
+	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_ALWAYS_ON_TOP);
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_HEIGHT, SCREEN_WIDTH);
 
@@ -46,15 +46,19 @@ int main(int argc, char* args[]) {
 					break;
 			}
 		}
-		
+
 		//Tick
 		core->emulateCycle();
-	
-		SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_HEIGHT * sizeof(uint32_t));
-		
-		SDL_RenderClear(renderer);
-		SDL_RenderCopyEx(renderer, texture, NULL, NULL, -90, NULL, SDL_FLIP_NONE);
-		SDL_RenderPresent(renderer);
+
+		//if(core->drawFlag) {
+			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_HEIGHT * sizeof(uint32_t));
+			SDL_RenderClear(renderer);
+			SDL_RenderCopyEx(renderer, texture, NULL, NULL, -90, NULL, SDL_FLIP_NONE);
+			SDL_RenderPresent(renderer);
+			
+			//core->drawFlag = false;
+			cout << core->pixels[100];
+		//}
 	}
 
 	SDL_DestroyTexture(texture);
