@@ -129,9 +129,12 @@ void si8080::emulateCycle() {
 			
 		case 0x09: //DAD B
 		{
-			uint16_t tmp = setCond16(((h << 8) + l) + ((b << 8) + c), (h << 8) + l, (b << 8) + c, 0x4);
+			uint32_t tmp = ((h << 8) + l) + ((b << 8) + c);
 			h = (tmp & 0xff00) >> 8;
 			l = tmp & 0xff;
+
+			cy = (tmp > 0xffff);
+			
 		}
 			break;
 			
@@ -207,9 +210,11 @@ void si8080::emulateCycle() {
 		//this isn't setting the carry right, need to make a new function specifically for these kind of instructions
 		case 0x19: //DAD D
 		{
-			uint16_t tmp = setCond16(((h << 8) + l) + ((d << 8) + e), (h << 8) + l, (d << 8) + e, 0x4);
+			uint32_t tmp = ((h << 8) + l) + ((d << 8) + e);
 			h = (tmp & 0xff00) >> 8;
 			l = tmp & 0xff;
+
+			cy = (tmp > 0xffff);
 		}
 			break;
 
@@ -267,9 +272,11 @@ void si8080::emulateCycle() {
 
 		case 0x29: //DAD H
 		{
-			uint16_t tmp = setCond16(((h << 8) + l) << 1, (h << 8) + l, (h << 8) + l, 0x4);
+			uint32_t tmp = (h << 8) + l) << 1;
 			h = (tmp & 0xff00) >> 8;
 			l = tmp & 0xff;
+
+			cy = (tmp > 0xffff);
 		}
 			break;
 
@@ -1036,19 +1043,6 @@ uint8_t si8080::setCond8(uint16_t ans, uint8_t old, uint8_t diff, uint8_t flags)
 	return ans & 0xff;
 }
 
-uint16_t si8080::setCond16(uint32_t ans, uint16_t old, uint16_t diff, uint8_t flags) {
-	if((flags & 0x10) == 0x10)
-		cy = (ans > 0xff);
-	if((flags & 0xf) == 0xf) {
-		ac = checkAC(ans & 0xff, diff, old);
-		s = ((ans & 0x80) != 0);
-		z = ((ans & 0xff) == 0);
-		p = checkParity(ans & 0xff);
-	}
-
-	return ans;
-}
-
 uint8_t si8080::checkParity(uint8_t ans) {
 	bitset<8> bs(ans);
 	int count = 0;
@@ -1064,10 +1058,10 @@ uint8_t si8080::checkAC(uint8_t ans, uint16_t diff, uint16_t old) {
 	return (((old ^ diff ^ ans) & 0x10) == 0x10);
 }
 
-/*if(ans >= old) { //pos
+/*if(ans >= old) {
 		return (~((old ^ diff) & 0x10) == (ans & 0x10));
 	}
-	else { //neg
+	else {
 		return ((old & 0x8) == 0 && (diff & 0x8) == 1);
 	}
 
