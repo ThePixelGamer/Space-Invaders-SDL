@@ -15,6 +15,8 @@ const Uint8*	state;
 si8080* core = new si8080();
 bool run = true;
 
+SDL_Rect scale = {0, 0, SCREEN_HEIGHT, SCREEN_WIDTH};
+
 void keyboard(bool);
 int main(int argc, char* args[]) {
 	SDL_Renderer*				renderer;
@@ -23,8 +25,8 @@ int main(int argc, char* args[]) {
 	
 	SDL_Init(SDL_INIT_VIDEO);
 
-	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_ALWAYS_ON_TOP);
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED /*| SDL_RENDERER_PRESENTVSYNC*/);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_HEIGHT, SCREEN_WIDTH);
 
 	while(run) {
@@ -52,9 +54,9 @@ int main(int argc, char* args[]) {
 		if(core->drawFlag) {
 			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_HEIGHT * sizeof(uint32_t));
 			SDL_RenderClear(renderer);
-			SDL_RenderCopyEx(renderer, texture, NULL, NULL, -90, NULL, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(renderer, texture, NULL, &scale, -90, NULL, SDL_FLIP_NONE); //stretches texture to 256x256 :')
 			SDL_RenderPresent(renderer);
-			//core->drawFlag = false;
+			core->drawFlag = false;
 		}
 	}
 
