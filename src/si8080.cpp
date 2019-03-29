@@ -272,7 +272,7 @@ void si8080::emulateCycle() {
 
 		case 0x29: //DAD H
 		{
-			uint32_t tmp = (h << 8) + l) << 1;
+			uint32_t tmp = ((h << 8) + l) << 1;
 			h = (tmp & 0xff00) >> 8;
 			l = tmp & 0xff;
 
