@@ -38,33 +38,30 @@ si8080::si8080() {
 	pixels = new uint32_t[256 * 224 * 8]; 
 
 	for(int x = 0; x < 224; x++) { 
-		for(int y = 0; y < 256; y++) { //2400, 2401.. bottom left to upper left then next row
-			if(y < 16) {
+		for(int y = 0; y < 256*8; y++) { //2400, 2401.. bottom left to upper left then next row
+			if(y > 240) {
 				if(x < 16) {
-					pixels[(x*256) + y] = 0xFFFFFFFF; //white 
+					pixels[(y*224) + x] = 0xFFFFFFFF; //white 
 				}
 				else if(x < 118) {
-					pixels[(x*256) + y] = 0x00FF00FF; //green
+					pixels[(y*224) + x] = 0x00FF00FF; //green
 				}
 				else if(x < 224) {
-					pixels[(x*256) + y] = 0xFFFFFFFF; //white
+					pixels[(y*224) + x] = 0xFFFFFFFF; //white
 				}
-			
 			}
-			else if(y < 72) {
-				pixels[(x*256) + y] = 0x00FF00FF; //green
+			else if(y > 184) {
+				pixels[(y*224) + x] = 0x00FF00FF; //green
 			}
-			else if(y < 192) {
-				pixels[(x*256) + y] = 0xFFFFFFFF; //white
+			else if(y > 64) {
+				pixels[(y*224) + x] = 0xFFFFFFFF; //white
 			}
-			else if(y < 224) {
-				pixels[(x*256) + y] = 0xFF0000FF; //red
+			else if(y > 32) {
+				pixels[(y*224) + x] = 0xFF0000FF; //red
 			}
-			else if(y < 256) {
-				pixels[(x*256) + y] = 0xFFFFFFFF; //white
+			else if(y > 0) {
+				pixels[(y*224) + x] = 0xFFFFFFFF; //white
 			}
-			else
-				pixels[(x*256) + y] = 0x00000000; //black
 		}
 	}
 

@@ -29,7 +29,7 @@ int main(int argc, char* args[]) {
 
 	window = SDL_CreateWindow("Space Invaders", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED /*| SDL_RENDERER_PRESENTVSYNC*/);
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_HEIGHT, SCREEN_WIDTH);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 	while(run) {
 		//Handle Updates
@@ -38,15 +38,22 @@ int main(int argc, char* args[]) {
 				case SDL_QUIT:
 					exit(0);
 					break;
-			  case SDL_KEYDOWN:
+					
+			  	case SDL_KEYDOWN:
 					state = SDL_GetKeyboardState(NULL);
 					keyboard(true);
 					break;
-			  case SDL_KEYUP:
+
+			  	case SDL_KEYUP:
 					state = SDL_GetKeyboardState(NULL);
 					keyboard(false);
 					break;
-			  default:
+			
+				case SDL_WINDOWEVENT:
+					core->drawFlag = true;
+					break;
+
+			  	default:
 					break;
 			}
 		}
@@ -54,14 +61,12 @@ int main(int argc, char* args[]) {
 		//Tick
 		core->emulateCycle();
 		if(core->drawFlag) {
-			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_HEIGHT * sizeof(uint32_t));
-			int w = 256, h = 256;
-			SDL_GetWindowSize(window, &w, &h);
-			SDL_Rect scale = {0, 0, w, w};
+			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint32_t));
+			
 			SDL_RenderClear(renderer);
-			SDL_RenderCopy(renderer, texture, NULL, &scale); //stretches texture to 256x256 :')
+			SDL_RenderCopy(renderer, texture, NULL, NULL); //stretches texture to 256x256 :')
 			SDL_RenderPresent(renderer);
-			//core->drawFlag = false;
+			core->drawFlag = false;
 		}
 	}
 
@@ -77,6 +82,8 @@ void keyboard(bool press){
 		if(state[SDL_SCANCODE_ESCAPE])
 			run = false; //Much Safer Exit :)
 
+		if(state[SDL_SCANCODE_R])
+			SDL_SetWindowSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
 		// if(state[SDL_SCANCODE_1]) core->port[0] = (core->port[0] ^ 0x2) + 0x2; //READ1 bit1
 		// if(state[SDL_SCANCODE_2]) core->port[0] = (core->port[0] ^ 0x4) + 0x4; //READ1 bit2
 		// if(state[SDL_SCANCODE_SPACE]) core->port[0] = (core->port[0] ^ 0x10) + 0x10; //READ1 bit4
