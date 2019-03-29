@@ -1110,8 +1110,8 @@ the above is my own personal way of doing it but somebody showed me a much simpl
 ha idiot
 */
 
-void si8080::vramChange(uint8_t value) {
-	bool forceStopRendering = false;
+void si8080::vramChange(uint8_t value) { //Couldnt be right, but fuck it :D
+	bool forceStopRendering = true;
 	if(forceStopRendering){
 		//cout << dec << value << endl; 
 		uint16_t loc = ((uint16_t) h << 8) + l - 0x2400;
@@ -1122,8 +1122,8 @@ void si8080::vramChange(uint8_t value) {
 		
 		//loc = 0x100
 		int offset = loc * 8; //800
-		int x = offset / 256; //1
-		int y = offset - (x*256); //0
+		int y = offset / 256; //1
+		int x = offset - (y*256); //0
 		
 		for(int i = 0; i < 8; i++) {
 			bool bit = (((value >> i) & 0x1) == 0x1);
