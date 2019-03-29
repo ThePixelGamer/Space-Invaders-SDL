@@ -969,7 +969,8 @@ void si8080::emulateCycle() {
 			pc += 2;
 			break;
 
-		case 0xf3: //not done
+		case 0xf3: //DI
+			interrupt = false;
 			break;
 
 		case 0xf4: //not done
@@ -1002,7 +1003,7 @@ void si8080::emulateCycle() {
 			break;
 
 		case 0xfb: //EI
-			interrupt = 1;
+			interrupt = true;
 			break;
 
 		case 0xfc: //not done
@@ -1022,7 +1023,7 @@ void si8080::emulateCycle() {
  
 }
 
-//flags - 0x1 nothing 0x2 logic inst 0x4 math inst
+//flags - 0x2 logic inst 0x4 math inst
 //also make sure diff is the thing you're adding/subtracting from the original (so the thing right of the operation)
 uint8_t si8080::setCond8(uint16_t ans, uint8_t old, uint8_t diff, uint8_t flags) {
 	if((flags & 0x2) == 0x2) {
