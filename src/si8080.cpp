@@ -1089,7 +1089,7 @@ uint8_t si8080::setCond8(uint16_t ans, uint8_t old, uint8_t diff, uint8_t flags)
 uint8_t si8080::checkParity(uint8_t ans) {
 	bitset<8> bs(ans);
 	int count = 0;
-	for(int i = 0; i < bs.to_string().size(); i++) {
+	for(unsigned int i = 0; i < bs.to_string().size(); i++) {
 		if(bs.to_string().substr(i, 1).compare("1") == 0) 
 			count++;
 	}
@@ -1109,41 +1109,46 @@ uint8_t si8080::checkAC(uint8_t ans, uint16_t diff, uint16_t old) {
 	}
 
 the above is my own personal way of doing it but somebody showed me a much simplier way so I decided to use that instead
+
+ha idiot
 */
 
 void si8080::vramChange(uint8_t value) {
-	//cout << dec << value << endl; 
-	uint16_t loc = ((uint16_t) h << 8) + l - 0x2400;
-	
-	if(pc == 0x143b) {
-		cout << "draw" << endl;
-	}
-	
-	//loc = 0x100
-	int offset = loc * 8; //800
-	int x = offset / 256; //1
-	int y = offset - (x*256); //0
-	
-	for(int i = 0; i < 8; i++) {
-		bool bit = (((value >> i) & 0x1) == 0x1);
+	bool forceStopRendering = false;
+	if(forceStopRendering){
+		//cout << dec << value << endl; 
+		uint16_t loc = ((uint16_t) h << 8) + l - 0x2400;
 		
-		if(y < 16 * 8) {
-			if(x < 16 * 8) 
-				pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0; //white 
-			else if(x < 118 * 8) 
+		if(pc == 0x143b) {
+			cout << "draw" << endl;
+		}
+		
+		//loc = 0x100
+		int offset = loc * 8; //800
+		int x = offset / 256; //1
+		int y = offset - (x*256); //0
+		
+		for(int i = 0; i < 8; i++) {
+			bool bit = (((value >> i) & 0x1) == 0x1);
+			
+			if(y < 16 * 8) {
+				if(x < 16 * 8) 
+					pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0; //white 
+				else if(x < 118 * 8) 
+					pixels[offset + i] = (bit) ? 0x00FF00FF : 0x0; //green
+				else if(x < 224 * 8) 
+					pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0; //white
+			}
+			else if(y < 72 * 8)
 				pixels[offset + i] = (bit) ? 0x00FF00FF : 0x0; //green
-			else if(x < 224 * 8) 
+			else if(y < 192 * 8)
+				pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0;//white
+			else if(y < 224 * 8)
+				pixels[offset + i] = (bit) ? 0xFF0000FF : 0x0; //red
+			else if(y < 256 * 8)
 				pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0; //white
 		}
-		else if(y < 72 * 8)
-			pixels[offset + i] = (bit) ? 0x00FF00FF : 0x0; //green
-		else if(y < 192 * 8)
-			pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0;//white
-		else if(y < 224 * 8)
-			pixels[offset + i] = (bit) ? 0xFF0000FF : 0x0; //red
-		else if(y < 256 * 8)
-			pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0; //white
+		
+		drawFlag = true;
 	}
-	
-	drawFlag = true;
 } 

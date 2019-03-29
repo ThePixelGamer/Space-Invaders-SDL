@@ -15,10 +15,12 @@ const Uint8*	state;
 si8080* core = new si8080();
 bool run = true;
 
-SDL_Rect scale = {0, 0, SCREEN_HEIGHT, SCREEN_WIDTH};
-
 void keyboard(bool);
 int main(int argc, char* args[]) {
+	//Gets Rid Of Warning :)
+	if(argc > 0)
+		std::cout << args[0];
+
 	SDL_Renderer*				renderer;
 	SDL_Texture*				texture;
 	SDL_Event					event;
@@ -53,10 +55,13 @@ int main(int argc, char* args[]) {
 		core->emulateCycle();
 		if(core->drawFlag) {
 			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_HEIGHT * sizeof(uint32_t));
+			int w = 256, h = 256;
+			SDL_GetWindowSize(window, &w, &h);
+			SDL_Rect scale = {0, 0, w, w};
 			SDL_RenderClear(renderer);
-			SDL_RenderCopyEx(renderer, texture, NULL, &scale, -90, NULL, SDL_FLIP_NONE); //stretches texture to 256x256 :')
+			SDL_RenderCopy(renderer, texture, NULL, &scale); //stretches texture to 256x256 :')
 			SDL_RenderPresent(renderer);
-			core->drawFlag = false;
+			//core->drawFlag = false;
 		}
 	}
 
@@ -72,8 +77,6 @@ void keyboard(bool press){
 		if(state[SDL_SCANCODE_ESCAPE])
 			run = false; //Much Safer Exit :)
 
-		
-		
 		// if(state[SDL_SCANCODE_1]) core->port[0] = (core->port[0] ^ 0x2) + 0x2; //READ1 bit1
 		// if(state[SDL_SCANCODE_2]) core->port[0] = (core->port[0] ^ 0x4) + 0x4; //READ1 bit2
 		// if(state[SDL_SCANCODE_SPACE]) core->port[0] = (core->port[0] ^ 0x10) + 0x10; //READ1 bit4
