@@ -1116,9 +1116,7 @@ void si8080::vramChange(uint8_t value) { //Couldnt be right, but fuck it :D
 		//cout << dec << value << endl; 
 		uint16_t loc = ((uint16_t) h << 8) + l - 0x2400;
 		
-		if(pc == 0x143b) {
-			cout << "draw" << endl;
-		}
+		cout << hex << +value << endl;
 		
 		//loc = 0x100
 		int offset = loc * 8; //800
