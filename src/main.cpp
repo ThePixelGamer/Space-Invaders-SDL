@@ -10,10 +10,13 @@
 #define SCREEN_HEIGHT 256
 #define SCREEN_WIDTH 224
 
+#define CYCLES_EVERY_FRAME 2000000 / 60
+
 SDL_Window*		window;
 const Uint8*	state;
 si8080* core = new si8080();
 bool run = true;
+uint8_t vInterrupt = 0xcf;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
@@ -26,14 +29,14 @@ int main(int argc, char* args[]) {
 	SDL_Event					event;
 	
 	SDL_Init(SDL_INIT_VIDEO);
-
+	
 	SDL_DisplayMode DM;
 	SDL_GetCurrentDisplayMode(0, &DM);
 
 	window = SDL_CreateWindow("Space Invaders", (DM.w/2)-(SCREEN_WIDTH/2), (DM.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALWAYS_ON_TOP);
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED /*| SDL_RENDERER_PRESENTVSYNC*/);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-
+	
 	while(run) {
 		//Handle Updates
 		while(SDL_PollEvent(&event)) {
@@ -61,13 +64,27 @@ int main(int argc, char* args[]) {
 			}
 		}
 		
-		//Tick
-		core->emulateCycle();
+		core->cycCount = 0;
+		
+		while(core->cycCount <= CYCLES_EVERY_FRAME) {
+			core->emulateCycle(0);
+			
+			core->cycCount += core->cycles - core->cycBefore;
+			
+			if(core->cycles >= (CYCLES_EVERY_FRAME / 2)) {
+				if(core->interrupt) {
+					core->emulateCycle(vInterrupt = (vInterrupt == 0xcf) ? 0xd7 : 0xcf);					//cf or d7
+					core->interrupt = false;
+				}
+				core->cycles -= (CYCLES_EVERY_FRAME / 2);
+			}
+		}
+		
 		if(core->drawFlag) {
 			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint32_t));
 			
 			SDL_RenderClear(renderer);
-			SDL_RenderCopy(renderer, texture, NULL, NULL); //stretches texture to 256x256 :')
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
 			core->drawFlag = false;
 		}

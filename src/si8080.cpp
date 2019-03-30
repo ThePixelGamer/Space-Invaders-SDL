@@ -34,33 +34,35 @@ si8080::si8080() {
 
 	pc = 0x0;	
 	sp = 0x0;	
+	
+	interrupt = false;
 
-	pixels = new uint32_t[256 * 224 * 8]; 
+	pixels = new uint32_t[224 * 256]; //vram is 224*32 bytes, each bit is a pixel
 
 	for(int x = 0; x < 224; x++) { 
-		for(int y = 0; y < 256*8; y++) { //2400, 2401.. bottom left to upper left then next row
-			if(y > 240) {
+		for(int y = 0; y < 256; y++) { //2400, 2401.. bottom left to upper left then next row
+			if(y < 16) {
 				if(x < 16) {
-					pixels[(y*224) + x] = 0xFFFFFFFF; //white 
+					pixels[((255 - y) * 224) + x] = 0xFFFFFFFF; //white 
 				}
 				else if(x < 118) {
-					pixels[(y*224) + x] = 0x00FF00FF; //green
+					pixels[((255 - y) * 224) + x] = 0x00FF00FF; //green
 				}
 				else if(x < 224) {
-					pixels[(y*224) + x] = 0xFFFFFFFF; //white
+					pixels[((255 - y) * 224) + x] = 0xFFFFFFFF; //white
 				}
 			}
-			else if(y > 184) {
-				pixels[(y*224) + x] = 0x00FF00FF; //green
+			else if(y < 72) {
+				pixels[((255 - y) * 224) + x] = 0x00FF00FF; //green
 			}
-			else if(y > 64) {
-				pixels[(y*224) + x] = 0xFFFFFFFF; //white
+			else if(y < 192) {
+				pixels[((255 - y) * 224) + x] = 0xFFFFFFFF; //white
 			}
-			else if(y > 32) {
-				pixels[(y*224) + x] = 0xFF0000FF; //red
+			else if(y < 224) {
+				pixels[((255 - y) * 224) + x] = 0xFF0000FF; //red
 			}
-			else if(y > 0) {
-				pixels[(y*224) + x] = 0xFFFFFFFF; //white
+			else if(y < 256) {
+				pixels[((255 - y) * 224) + x] = 0xFFFFFFFF; //white
 			}
 		}
 	}
@@ -74,12 +76,21 @@ si8080::si8080() {
 		memory[i + (2048*2)] = romf[i];
 		memory[i + (2048*3)] = rome[i];
 	}
+	
+	cycles = 0;
+	cycCount = 0;
+	cycBefore = 0;
 
 	drawFlag = true;
 }
 
-void si8080::emulateCycle() {	
-	uint8_t opcode = memory[pc];
+void si8080::emulateCycle(uint8_t opcode) {	
+	if(!opcode)
+		opcode = memory[pc];
+	
+	cycBefore = cycles;
+	
+	cycles += 4;
 
 	if(debug) {
 		cout << "Opcode: ";
@@ -125,10 +136,14 @@ void si8080::emulateCycle() {
 			c = memory[pc+1];
 			b = memory[pc+2];	
 			pc += 2;	
+			
+			cycles += 6;
 			break;
 
 		case 0x02: //STAX B
 			memory[((uint16_t) b << 8) + c] = a;
+			
+			cycles += 3;
 			break;
 			
 		case 0x03: //INX B
@@ -136,20 +151,28 @@ void si8080::emulateCycle() {
 			uint16_t tmp = ((uint16_t) b << 8) + (c + 1);
 			c = (tmp & 0xff);
 			b = (tmp >> 8);
+			
+			cycles += 1;
 		}
 			break;
 			
 		case 0x04: //INR B
 			b = setCond8(b + 1, b, 1, 0x4);
+			
+			cycles += 1;
 			break;
 			
 		case 0x05: //DCR B
 			b = setCond8(b - 1, b, 1, 0x4);	
+			
+			cycles += 1;
 			break;
 
 		case 0x06: //MVI B, D8
 			b = memory[pc+1];
 			pc += 1;	
+			
+			cycles += 3;
 			break;
 			
 		case 0x07: //RLC
@@ -171,32 +194,43 @@ void si8080::emulateCycle() {
 
 			cy = (tmp > 0xffff);
 			
+			cycles += 6;
 		}
 			break;
 			
 		case 0x0a: //LDAX B
 			a = memory[(b << 8) + c];
+			
+			cycles += 3;
 			break;
 			
 		case 0x0b: //DCX B
-			{
-				uint16_t tmp = ((uint16_t) b << 8) + c - 1;
-				c = (tmp & 0xff);
-				b = (tmp >> 8);
-			}
+		{
+			uint16_t tmp = ((uint16_t) b << 8) + c - 1;
+			c = (tmp & 0xff);
+			b = (tmp >> 8);
+		
+			cycles += 1;
+		}
 			break;
 			
 		case 0x0c: //INR C
 			c = setCond8(c + 1, 1, c, 0x4);	
+			
+			cycles += 1;
 			break;
 			
 		case 0x0d: //DCR C
 			c = setCond8(c - 1, c, 1, 0x4);	
+			
+			cycles += 1;
 			break;
 			
 		case 0x0e: //MVI C,D8
 			c = memory[pc+1];
 			pc += 1;	
+			
+			cycles += 3;
 			break;
 			
 		case 0x0f: //RRC
@@ -214,10 +248,14 @@ void si8080::emulateCycle() {
 			e = memory[pc+1];
 			d = memory[pc+2];	
 			pc += 2;
+			
+			cycles += 6;
 			break;
 
 		case 0x12: //STAX D
 			memory[(d << 8) + e] = a;
+			
+			cycles += 3;
 			break;
 
 		case 0x13: //INX D
@@ -225,15 +263,21 @@ void si8080::emulateCycle() {
 			uint16_t tmp = ((uint16_t) d << 8) + e + 1;
 			e = (tmp & 0xff);
 			d = (tmp >> 8);
+			
+			cycles += 1;
 		}
 			break;
 
 		case 0x14: //INR D
 			d = setCond8(d + 1, d, 1, 0x4);
+			
+			cycles += 1;
 			break;
 
 		case 0x15: //DCR D
-			d= setCond8(d - 1, d, 1, 0x4);
+			d = setCond8(d - 1, d, 1, 0x4);
+			
+			cycles += 1;
 			break;
 
 		case 0x16: //not done
@@ -251,11 +295,15 @@ void si8080::emulateCycle() {
 			l = tmp & 0xff;
 
 			cy = (tmp > 0xffff);
+			
+			cycles += 6;
 		}
 			break;
 
 		case 0x1a: //LDAX D
 			a = memory[(d << 8) + e];
+			
+			cycles += 3;
 			break;
 
 		case 0x1b: //not done
@@ -278,6 +326,8 @@ void si8080::emulateCycle() {
 			l = memory[pc+1];
 			h = memory[pc+2];
 			pc += 2;
+			
+			cycles += 6;
 			break;
 
 		case 0x22: //not done
@@ -289,6 +339,8 @@ void si8080::emulateCycle() {
 			uint16_t tmp = ((uint16_t) h << 8) + l + 1;
 			l = (tmp & 0xff);
 			h = (tmp >> 8);
+			
+			cycles += 1;
 		}
 			break;
 
@@ -301,6 +353,8 @@ void si8080::emulateCycle() {
 		case 0x26: //MVI H,D8
 			h = memory[pc+1];
 			pc += 1;
+			
+			cycles += 3;
 			break;
 
 		case 0x27: //wolfy don't even dare to fucking attempt this one lmao (it's not needed and I'll do it later)
@@ -313,6 +367,8 @@ void si8080::emulateCycle() {
 			l = tmp & 0xff;
 
 			cy = (tmp > 0xffff);
+			
+			cycles += 6;
 		}
 			break;
 
@@ -339,15 +395,21 @@ void si8080::emulateCycle() {
 		case 0x31: //LXI SP,D16
 			sp = (((uint16_t) memory[pc+2] << 8) + memory[pc+1]);
 			pc += 2;
+			
+			cycles += 6;
 			break;
 
 		case 0x32: //STA adr
 			memory[(((uint16_t)memory[pc+2] << 8) + memory[pc+1])] = a;
 			pc += 2;
+			
+			cycles += 9;
 			break;
 
 		case 0x33: //INX SP
 			sp += 1;
+			
+			cycles += 1;
 			break;
 
 		case 0x34: //not done
@@ -367,6 +429,8 @@ void si8080::emulateCycle() {
 			memory[loc] = memory[pc+1];
 			
 			pc += 1;
+			
+			cycles += 6;
 		}
 			break;
 
@@ -379,10 +443,14 @@ void si8080::emulateCycle() {
 		case 0x3a: //LDA adr
 			a = memory[(((uint16_t)memory[pc+2] << 8) + memory[pc+1])];
 			pc += 2;
+			
+			cycles += 9;
 			break;
 
 		case 0x3b: //DCX SP
 			sp -= 1;
+			
+			cycles += 1;
 			break;
 
 		case 0x3c: //not done
@@ -394,6 +462,8 @@ void si8080::emulateCycle() {
 		case 0x3e: //MVI A,D8
 			a = memory[pc+1];
 			pc += 1;
+			
+			cycles += 3;
 			break;
 
 		case 0x3f: //not done
@@ -467,6 +537,8 @@ void si8080::emulateCycle() {
 
 		case 0x56: //MOV D,M
 			d = memory[(((uint16_t) h << 8) + l)];
+			
+			cycles += 3;
 			break;
 
 		case 0x57: //not done
@@ -492,6 +564,8 @@ void si8080::emulateCycle() {
 
 		case 0x5e: //MOV E,M
 			e = memory[(((uint16_t) h << 8) + l)];
+			
+			cycles += 3;
 			break;
 
 		case 0x5f: //not done
@@ -517,6 +591,8 @@ void si8080::emulateCycle() {
 
 		case 0x66: //MOV H,M
 			h = memory[(((uint16_t) h << 8) + l)];
+			
+			cycles += 3;
 			break;
 
 		case 0x67: //not done
@@ -545,6 +621,8 @@ void si8080::emulateCycle() {
 
 		case 0x6f: //MOV L,A
 			l = a;
+			
+			cycles += 1;
 			break;
 
 		case 0x70: //not done
@@ -570,6 +648,8 @@ void si8080::emulateCycle() {
 
 		case 0x77: //MOV M,A
 			memory[(((uint16_t) h << 8) + l)] = a;
+			
+			cycles += 3;			
 			break;
 
 		case 0x78: //not done
@@ -580,21 +660,29 @@ void si8080::emulateCycle() {
 
 		case 0x7a: //MOV A,D
 			a = d;
+			
+			cycles += 1;
 			break;
 
 		case 0x7b: //MOV A,E
 			a = e;
+			
+			cycles += 1;
 			break;
 
 		case 0x7c: //MOV A,H
 			a = h;
+			
+			cycles += 1;
 			break;
 
 		case 0x7d: //not done
 			break;
 
-		case 0x7e: //MOV H,M
+		case 0x7e: //MOV A,M
 			a = memory[(((uint16_t) h << 8) + l)];
+			
+			cycles += 3;
 			break;
 
 		case 0x7f: //not done
@@ -718,8 +806,7 @@ void si8080::emulateCycle() {
 			break;
 
 		case 0xa7: //ANA A
-			a = setCond8(a & a, a, a, 0x2);
-			cy = 0;
+			a = setCond8(a & a, 0, 0, 0x2);
 			break;
 
 		case 0xa8: //not done
@@ -803,17 +890,24 @@ void si8080::emulateCycle() {
 			c = memory[sp];
 			b = memory[sp+1];
 			sp += 2;
+			
+			cycles += 6;
 			break;
 
 		case 0xc2: //JNZ adr
-			if(z == 0)
+			if(z == 0) {
 				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+				
+				cycles += 6;
+			}
 			else
 				pc += 2;
 			break;
 
 		case 0xc3: //JMP adr
 			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+			
+			cycles += 6;
 			break;
 
 		case 0xc4: //not done
@@ -824,11 +918,15 @@ void si8080::emulateCycle() {
 			memory[sp-2] = c;
 			memory[sp-1] = b;
 			sp -= 2;
+			
+			cycles += 7;
 			break;
 
 		case 0xc6: //ADI D8
 			a = setCond8(a + memory[pc+1], a, memory[pc+1], 0x4);
 			pc += 1;
+			
+			cycles += 3;
 			break;
 
 		case 0xc7: //not done
@@ -838,8 +936,10 @@ void si8080::emulateCycle() {
 			break;
 
 		case 0xc9: //RET
-			pc = ((uint16_t) memory[sp+1] << 8) + memory[sp];
+			pc = ((uint16_t) memory[sp+1] << 8) + memory[sp] + 2;
 			sp += 2;
+			
+			cycles += 6;
 			break;
 
 		case 0xca: //not done
@@ -856,6 +956,8 @@ void si8080::emulateCycle() {
 			sp -= 2;
 
 			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+			
+			cycles += 13;
 			break;
 
 		case 0xce: //not done
@@ -872,6 +974,8 @@ void si8080::emulateCycle() {
 			e = memory[sp];
 			d = memory[sp+1];
 			sp += 2;
+			
+			cycles += 6;
 			break;
 
 		case 0xd2: //not done
@@ -881,6 +985,8 @@ void si8080::emulateCycle() {
 		case 0xd3: //OUT D8
 			port[memory[pc+1]] = a;
 			pc += 1;
+			
+			cycles += 6;
 			break;
 
 		case 0xd4: //not done
@@ -891,6 +997,8 @@ void si8080::emulateCycle() {
 			memory[sp-2] = e;
 			memory[sp-1] = d;
 			sp -= 2;
+			
+			cycles += 7;
 			break;
 
 		case 0xd6: //not done
@@ -929,6 +1037,8 @@ void si8080::emulateCycle() {
 			l = memory[sp];
 			h = memory[sp+1];
 			sp += 2;
+			
+			cycles += 6;
 			break;
 
 		case 0xe2: //not done
@@ -946,11 +1056,15 @@ void si8080::emulateCycle() {
 			memory[sp-2] = l;
 			memory[sp-1] = h;
 			sp -= 2;
+			
+			cycles += 7;
 			break;
 
 		case 0xe6: //ANI D8
 			a = setCond8(a & memory[pc+1], a, memory[pc+1], 0x4);
 			pc += 1;
+			
+			cycles += 3;
 			break;
 
 		case 0xe7: //not done
@@ -1001,6 +1115,8 @@ void si8080::emulateCycle() {
 			p  = (flags & 0x4) >> 2;
 			a = memory[sp+1];
 			sp += 2;
+			
+			cycles += 6;
 		}
 			break;
 
@@ -1021,6 +1137,8 @@ void si8080::emulateCycle() {
 			memory[sp-2] = (s << 7) + (z << 6) + (ac << 4) + (p << 2) + 0x2 + cy;
 			memory[sp-1] = a;
 			sp -= 2;
+			
+			cycles += 7;
 		}
 			break;
 
@@ -1050,9 +1168,11 @@ void si8080::emulateCycle() {
 			break;
 
 		case 0xfe: //CPI D8
-			setCond8(a - memory[pc+1], memory[pc+1], a, 0xf);
+			setCond8(a - memory[pc+1], a, memory[pc+1], 0x4);
 			cy = (a < memory[pc+1]);
 			pc += 1;
+			
+			cycles += 3;
 			break;
 
 		case 0xff: //not done
@@ -1110,38 +1230,36 @@ the above is my own personal way of doing it but somebody showed me a much simpl
 ha idiot
 */
 
-void si8080::vramChange(uint8_t value) { //Couldnt be right, but fuck it :D
+void si8080::vramChange(uint8_t value) { //it's right now :D
 	bool forceStopRendering = true;
-	if(forceStopRendering){
-		//cout << dec << value << endl; 
+	if(forceStopRendering) {
 		uint16_t loc = ((uint16_t) h << 8) + l - 0x2400;
 		
-		cout << hex << +value << endl;
+		//cout << hex << +value << endl;
 		
-		//loc = 0x100
-		int offset = loc * 8; //800
-		int y = offset / 256; //1
-		int x = offset - (y*256); //0
+		int offset = loc * 8; 
+		int x = offset / 256;
+		int y = 255 - (offset % 256);
 		
 		for(int i = 0; i < 8; i++) {
 			bool bit = (((value >> i) & 0x1) == 0x1);
 			
-			if(y < 16 * 8) {
-				if(x < 16 * 8) 
-					pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0; //white 
-				else if(x < 118 * 8) 
-					pixels[offset + i] = (bit) ? 0x00FF00FF : 0x0; //green
-				else if(x < 224 * 8) 
-					pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0; //white
+			if(y < 16) {
+				if(x < 16) 
+					pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFFFFFFFF : 0x0; //white 
+				else if(x < 118) 
+					pixels[(y * 224) - (i * 224) + x] = (bit) ? 0x00FF00FF : 0x0; //green
+				else if(x < 224) 
+					pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFFFFFFFF : 0x0; //white
 			}
-			else if(y < 72 * 8)
-				pixels[offset + i] = (bit) ? 0x00FF00FF : 0x0; //green
-			else if(y < 192 * 8)
-				pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0;//white
-			else if(y < 224 * 8)
-				pixels[offset + i] = (bit) ? 0xFF0000FF : 0x0; //red
-			else if(y < 256 * 8)
-				pixels[offset + i] = (bit) ? 0xFFFFFFFF : 0x0; //white
+			else if(y < 72)
+				pixels[(y * 224) - (i * 224) + x] = (bit) ? 0x00FF00FF : 0x0; //green
+			else if(y < 192)
+				pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFFFFFFFF : 0x0;//white
+			else if(y < 224)
+				pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFF0000FF : 0x0; //red
+			else if(y < 256)
+				pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFFFFFFFF : 0x0; //white
 		}
 		
 		drawFlag = true;
