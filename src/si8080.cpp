@@ -966,10 +966,7 @@ void si8080::emulateCycle(uint8_t opcode) {
 
 		case 0xc2: //JNZ adr
 			if(z == 0) {
-				if(romSize == 0x2000)
-					pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-				else
-					pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 0x101;
+				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
 				//cout << hex << +pc << "\n";
 
 				cycles += 6;
@@ -979,10 +976,7 @@ void si8080::emulateCycle(uint8_t opcode) {
 			break;
 
 		case 0xc3: //JMP adr
-			if(romSize == 0x2000)
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			else
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 0x101;
+			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
 
 			//cout << hex << +pc << "\n";
 			
@@ -1068,22 +1062,12 @@ void si8080::emulateCycle(uint8_t opcode) {
 			break;
 
 		case 0xcd: //CALL adr
-			if(romSize == 0x2000) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			}
-			else {
-				if(((uint16_t) memory[pc+2] << 8) + memory[pc+1] > 0x100) {
-					memory[sp-2] = pc & 0xff;
-					memory[sp-1] = (pc & 0xff00) >> 8;
-					sp -= 2;
-					pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 0x101;
-				}
-				else
-					pc += 2;
-			}
+			memory[sp-2] = pc & 0xff;
+			memory[sp-1] = (pc & 0xff00) >> 8;
+			sp -= 2;
+			
+			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+
 			cycles += 13;
 			break;
 
