@@ -27,7 +27,7 @@ public:
 	si8080();
 
 	void            emulateCycle(uint8_t);
-	uint8_t         setCond8(uint16_t, uint8_t, uint8_t, uint8_t);
+	uint8_t         setCond8(int, uint8_t, uint8_t, uint8_t);
 	uint8_t         checkParity(uint8_t);
 	uint8_t         checkAC(uint8_t, uint16_t, uint16_t);
 	void            vramChange(uint8_t);    //probably a really dumb way to do it
