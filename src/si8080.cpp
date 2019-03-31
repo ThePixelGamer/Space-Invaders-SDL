@@ -30,13 +30,6 @@ const unsigned char rome[2048] = {0x20,0xc3,0xc9,0x16,0x21,0x84,0x20,0x7e,0xa7,0
                                     0x49,0x49,0x4a,0x3c,0x00,0x00,0x00,0x08,0x14,0x22,0x41,0x00,0x00,0x00,0x00,0x00,0x41,0x22,0x14,0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x14,0x14,0x14,0x14,0x14,0x00,0x00,0x00,0x22,0x14,0x7f,0x14,0x22,0x00,0x00,0x00,0x03,0x04,0x78,0x04,0x03,0x00,0x00,0x24,0x1b,0x26,0x0e,0x11,0x26,0x1c,0x26,0x0f,0x0b,0x00,0x18,0x04,0x11,0x12,0x25,0x26,0x26,0x28,0x1b,0x26,0x0f,0x0b,0x00,0x18,0x04,0x11,0x26,0x26,0x1b,0x26,0x02,0x0e,0x08,0x0d,0x26,0x01,0x01,0x00,0x00,0x01,0x00,0x02,0x01,0x00,0x02,0x01,0x00,0x60,0x10,0x0f,0x10,0x60,0x30,0x18,0x1a,0x3d,0x68,0xfc,0xfc,0x68,0x3d,0x1a,0x00,0x08,0x0d,0x12,0x04,0x11,0x13,0x26,0x26,0x02,0x0e,0x08,0x0d,0x0d,0x2a,0x50,0x1f,0x0a,0x2a,0x62,0x1f,0x07,0x2a,0xe1,0x1f,0xff,0x02,0x11,0x04,0x03,0x08,0x13,0x26,0x00,0x60,0x10,0x0f,0x10,0x60,0x38,0x19,0x3a,0x6d,0xfa,0xfa,0x6d,0x3a,0x19,0x00,0x00,0x20,0x40,0x4d,0x50,0x20,0x00,0x00,0x00,0x00,0x00,0xff,0xb8,0xff,0x80,0x1f,0x10,0x97,0x00,0x80,0x1f,0x00,0x00,0x01,0xd0,0x22,0x20,0x1c,0x10,0x94,0x00,0x20,0x1c,0x28,0x1c,0x26,0x0f,0x0b,0x00,0x18,0x04,0x11,0x12,0x26,0x1c,0x26,0x02,0x0e,0x08,0x0d,0x12,0x0f,0x14,0x12,0x07,0x26,0x00,0x08,0x08,0x08,0x08,0x08,0x00,0x00};
 
 si8080::si8080() {
-	debug = false;
-
-	pc = 0x0;	
-	sp = 0x0;	
-	
-	interrupt = false;
-
 	pixels = new uint32_t[224 * 256]; //vram is 224*32 bytes, each bit is a pixel
 
 	for(int x = 0; x < 224; x++) { 
@@ -76,12 +69,21 @@ si8080::si8080() {
 		memory[i + (2048*2)] = romf[i];
 		memory[i + (2048*3)] = rome[i];
 	}
+
+	romSize = 0x2000;
+	vramStart = 0x2400;
+	vramEnd = 0x4000;
+	pc = 0x0;	
+	sp = romSize + 0x400;	
 	
 	cycles = 0;
 	cycCount = 0;
 	cycBefore = 0;
 
 	drawFlag = true;
+	interrupt = false;
+
+	debug = false;
 }
 
 void si8080::emulateCycle(uint8_t opcode) {	
@@ -346,8 +348,14 @@ void si8080::emulateCycle(uint8_t opcode) {
 		}
 			break;
 
-		case 0x2a: //not done
+		case 0x2a: //LHLD adr
+		{
+			uint16_t loc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1];
+			l = memory[loc];
+			h = memory[loc+1];
 			pc += 2;
+			cycles += 12;
+		}
 			break;
 
 		case 0x2b: //not done
@@ -391,8 +399,8 @@ void si8080::emulateCycle(uint8_t opcode) {
 			int loc = (((uint16_t) h << 8) + l);
 
 			//cout << hex << loc << endl;
-			if((loc >= 0x2400 && loc < 0x4000) || (loc >= 0x6400 && loc < 0x8000))
-				vramChange(memory[loc] + 1);
+			if((loc >= vramStart) && (loc < vramEnd))
+				vramChange(loc, memory[loc] + 1);
 
 			memory[loc] = setCond8(memory[loc] + 1, memory[loc], 1, 0x4);
 			
@@ -405,8 +413,8 @@ void si8080::emulateCycle(uint8_t opcode) {
 			int loc = (((uint16_t) h << 8) + l);
 
 			//cout << hex << loc << endl;
-			if((loc >= 0x2400 && loc < 0x4000) || (loc >= 0x6400 && loc < 0x8000))
-				vramChange(memory[loc] - 1);
+			if((loc >= vramStart) && (loc < vramEnd))
+				vramChange(loc, memory[loc] - 1);
 
 			memory[loc] = setCond8(memory[loc] - 1, memory[loc], 1, 0x4);
 			
@@ -419,8 +427,8 @@ void si8080::emulateCycle(uint8_t opcode) {
 			int loc = (((uint16_t) h << 8) + l);
 
 			//cout << hex << loc << endl;
-			if((loc >= 0x2400 && loc < 0x4000) || (loc >= 0x6400 && loc < 0x8000))
-				vramChange(memory[pc+1]);
+			if((loc >= vramStart) && (loc < vramEnd))
+				vramChange(loc, memory[pc+1]);
 			
 			memory[loc] = memory[pc+1];
 			
@@ -694,9 +702,11 @@ void si8080::emulateCycle(uint8_t opcode) {
 			int loc = (((uint16_t) h << 8) + l);
 
 			//cout << hex << loc << endl;
-			if((loc >= 0x2400 && loc < 0x4000) || (loc >= 0x6400 && loc < 0x8000))
-				vramChange(a);
-
+			if((loc >= vramStart) && (loc < vramEnd))
+				vramChange(loc, a);
+			else if((loc >= vramStart*2) && (loc < vramEnd*2))
+				vramChange(loc-0x4000, a);
+			
 			memory[loc] = a;
 			
 			cycles += 3;
@@ -956,8 +966,10 @@ void si8080::emulateCycle(uint8_t opcode) {
 
 		case 0xc2: //JNZ adr
 			if(z == 0) {
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-				
+				if(romSize == 0x2000)
+					pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+				else
+					pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 0x101;
 				//cout << hex << +pc << "\n";
 
 				cycles += 6;
@@ -967,9 +979,12 @@ void si8080::emulateCycle(uint8_t opcode) {
 			break;
 
 		case 0xc3: //JMP adr
-			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+			if(romSize == 0x2000)
+				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+			else
+				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 0x101;
 
-			cout << hex << +pc << "\n";
+			//cout << hex << +pc << "\n";
 			
 			cycles += 6;
 			break;
@@ -1053,12 +1068,22 @@ void si8080::emulateCycle(uint8_t opcode) {
 			break;
 
 		case 0xcd: //CALL adr
-			memory[sp-2] = pc & 0xff;
-			memory[sp-1] = (pc & 0xff00) >> 8;
-			sp -= 2;
-
-			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
+			if(romSize == 0x2000) {
+				memory[sp-2] = pc & 0xff;
+				memory[sp-1] = (pc & 0xff00) >> 8;
+				sp -= 2;
+				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+			}
+			else {
+				if(((uint16_t) memory[pc+2] << 8) + memory[pc+1] > 0x100) {
+					memory[sp-2] = pc & 0xff;
+					memory[sp-1] = (pc & 0xff00) >> 8;
+					sp -= 2;
+					pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 0x101;
+				}
+				else
+					pc += 2;
+			}
 			cycles += 13;
 			break;
 
@@ -1234,7 +1259,8 @@ void si8080::emulateCycle(uint8_t opcode) {
 		case 0xe8: //not done
 			break;
 
-		case 0xe9: //not done
+		case 0xe9: //PCHL
+			pc = ((uint16_t) h << 8) + l - 1;
 			break;
 
 		case 0xea: //not done
@@ -1337,7 +1363,8 @@ void si8080::emulateCycle(uint8_t opcode) {
 		case 0xf8: //not done
 			break;
 
-		case 0xf9: //not done
+		case 0xf9: //SPHL
+			sp = ((uint16_t) h << 8) + l;
 			break;
 
 		case 0xfa: //JM adr
@@ -1392,7 +1419,7 @@ void si8080::emulateCycle(uint8_t opcode) {
 
 //flags - 0x2 logic inst 0x4 math inst
 //also make sure diff is the thing you're adding/subtracting from the original (so the thing right of the operation)
-uint8_t si8080::setCond8(int ans, uint8_t old, uint8_t diff, uint8_t flags) {
+uint8_t si8080::setCond8(int16_t ans, uint8_t old, uint8_t diff, uint8_t flags) {
 	if((flags & 0x2) == 0x2) {
 		cy = 0;
 		ac = 0;
@@ -1403,7 +1430,7 @@ uint8_t si8080::setCond8(int ans, uint8_t old, uint8_t diff, uint8_t flags) {
 	if((flags & 0x4) == 0x4) {
 		cy = (ans > 0xff);
 		ac = checkAC(ans & 0xff, diff, old);
-		s = (ans < 0) ? 1 : 0;
+		s = ((ans & 0x80) == 0x80);
 		z = ((ans & 0xff) == 0);
 		p = checkParity(ans & 0xff);
 	}
@@ -1438,13 +1465,12 @@ the above is my own personal way of doing it but somebody showed me a much simpl
 ha idiot
 */
 
-void si8080::vramChange(uint8_t value) { //it's right now :D
+void si8080::vramChange(uint16_t loc, uint8_t value) { //it's right now :D
 	bool forceStopRendering = true;
 	if(forceStopRendering) {
-		uint16_t loc = ((uint16_t) h << 8) + l - 0x2400;
-		
 		//cout << hex << +value << endl;
 		
+		loc -= vramStart;
 		int offset = loc * 8; 
 		int x = offset / 256;
 		int y = 255 - (offset % 256);
@@ -1473,3 +1499,45 @@ void si8080::vramChange(uint8_t value) { //it's right now :D
 		drawFlag = true;
 	}
 } 
+
+void si8080::load(const char* filename) {
+	cout << "Loading: " << (string)filename << "\n";
+		
+	FILE* rom = fopen(filename, "rb");
+	if (rom == NULL) {
+		fputs("File error", stderr); 
+	}
+	else {
+		fseek(rom, 0, SEEK_END);
+		romSize = ftell(rom);
+		vramStart = romSize + 0x400;
+		vramEnd = vramStart + 0x1C00;
+		sp = romSize + 0x400;	
+		rewind(rom);
+		cout << "Filesize: " << dec << (int)romSize << "\n";
+		
+		char* buffer = (char*)malloc(sizeof(char) * romSize);
+		if (buffer == NULL) {
+			fputs("Memory error", stderr); 
+			vramStart = 0x2400;
+			vramEnd = 0x4000;
+			sp = 0x2000 + 0x400;	
+		}
+		else {
+			size_t result = fread(buffer, 1, romSize, rom);
+			if (result != romSize) {
+				fputs("Reading error", stderr); 
+			}
+			else {
+				for(int i = 0; i < romSize; i++)
+					memory[i] = buffer[i];
+				
+				cout << "Loaded!" << "\n";
+				cout << hex << romSize << "\t" << vramStart << "\t" << vramEnd << "\n";
+
+				fclose(rom);
+				free(buffer);
+			}
+		}
+	}
+}

@@ -27,10 +27,11 @@ public:
 	si8080();
 
 	void            emulateCycle(uint8_t);
-	uint8_t         setCond8(int, uint8_t, uint8_t, uint8_t);
+	uint8_t         setCond8(int16_t, uint8_t, uint8_t, uint8_t);
 	uint8_t         checkParity(uint8_t);
 	uint8_t         checkAC(uint8_t, uint16_t, uint16_t);
-	void            vramChange(uint8_t);    //probably a really dumb way to do it
+	void            vramChange(uint16_t, uint8_t);    //probably a really dumb way to do it
+    void            load(const char*);
 
 private:
     uint8_t         a, b, c, d, e, h, l;   //registers
@@ -38,4 +39,7 @@ private:
 
 	uint16_t        pc, sp;                //counter + stack pointer
 	uint8_t         memory[0x4000 * 2];      //4kb + a mirror of it ¯\_(ツ)_/¯
+    long            romSize;
+    int             vramStart;
+    int             vramEnd;
 };  

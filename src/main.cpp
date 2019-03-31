@@ -20,9 +20,9 @@ uint8_t vInterrupt = 0xcf;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
-	//Gets Rid Of Warning :)
-	if(argc > 0)
-		std::cout << args[0];
+	
+	if(argc > 1)
+		core->load(args[1]);
 
 	SDL_Renderer*				renderer;
 	SDL_Texture*				texture;
