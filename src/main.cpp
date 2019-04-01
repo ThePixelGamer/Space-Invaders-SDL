@@ -21,8 +21,12 @@ uint8_t vInterrupt = 0xcf;
 void keyboard(bool);
 int main(int argc, char* args[]) {
 	
-	if(argc > 1)
-		core->load(args[1]);
+	if(argc > 1) {
+		cout << "Loaded: " << core->load(args[1]) << "\t" << "\n";
+	}
+	else {
+		cout << "Loaded: " << "Space Invaders 8192" << "\t" << "\n";
+	}
 
 	SDL_Renderer*				renderer;
 	SDL_Texture*				texture;

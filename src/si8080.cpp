@@ -1065,7 +1065,7 @@ void si8080::emulateCycle(uint8_t opcode) {
 			memory[sp-2] = pc & 0xff;
 			memory[sp-1] = (pc & 0xff00) >> 8;
 			sp -= 2;
-			
+
 			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
 
 			cycles += 13;
@@ -1484,9 +1484,7 @@ void si8080::vramChange(uint16_t loc, uint8_t value) { //it's right now :D
 	}
 } 
 
-void si8080::load(const char* filename) {
-	cout << "Loading: " << (string)filename << "\n";
-		
+string si8080::load(const char* filename) {		
 	FILE* rom = fopen(filename, "rb");
 	if (rom == NULL) {
 		fputs("File error", stderr); 
@@ -1498,30 +1496,31 @@ void si8080::load(const char* filename) {
 		vramEnd = vramStart + 0x1C00;
 		sp = romSize + 0x400;	
 		rewind(rom);
-		cout << "Filesize: " << dec << (int)romSize << "\n";
 		
 		char* buffer = (char*)malloc(sizeof(char) * romSize);
 		if (buffer == NULL) {
 			fputs("Memory error", stderr); 
 			vramStart = 0x2400;
 			vramEnd = 0x4000;
-			sp = 0x2000 + 0x400;	
+			sp = 0x2400;	
+			return "Space Invaders " + to_string(romSize);
 		}
 		else {
-			size_t result = fread(buffer, 1, romSize, rom);
+			uint16_t result = fread(buffer, 1, romSize, rom);
 			if (result != romSize) {
 				fputs("Reading error", stderr); 
 			}
 			else {
 				for(int i = 0; i < romSize; i++)
 					memory[i] = buffer[i];
-				
-				cout << "Loaded!" << "\n";
-				cout << hex << romSize << "\t" << vramStart << "\t" << vramEnd << "\n";
 
 				fclose(rom);
 				free(buffer);
+
+				return (string)filename + " " + to_string(romSize);
 			}
 		}
 	}
+
+	return "";
 }

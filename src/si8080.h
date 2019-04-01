@@ -31,7 +31,7 @@ public:
 	uint8_t         checkParity(uint8_t);
 	uint8_t         checkAC(uint8_t, uint16_t, uint16_t);
 	void            vramChange(uint16_t, uint8_t);    //probably a really dumb way to do it
-    void            load(const char*);
+    string          load(const char*);
 
 private:
     uint8_t         a, b, c, d, e, h, l;   //registers
