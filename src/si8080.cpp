@@ -74,7 +74,7 @@ si8080::si8080() {
 	vramStart = 0x2400;
 	vramEnd = 0x4000;
 	pc = 0x0;	
-	sp = romSize + 0x400;	
+	sp = vramStart;	
 	
 	cycles = 0;
 	cycCount = 0;
@@ -92,7 +92,7 @@ void si8080::emulateCycle(uint8_t opcode) {
 
 	cycBefore = cycles;
 	
-	cycles += 4;
+	loc = ((uint16_t) registers[0x04] << 8) + registers[0x05];
 
 	if(debug) {
 		cout << "Opcode: ";
@@ -102,1314 +102,242 @@ void si8080::emulateCycle(uint8_t opcode) {
 		cout << "\tCarry: " << +cy << "\tAux Carry: " << +ac << "\tSign: " << +s << "\tZero: " << +z << "\tParity: " << +p << "\n";
 	}
 
-	switch(opcode) {
-		case 0x00: //NOP
-			break;
+	switch((opcode & 0xc0) >> 6) { //xx000000
+		case 0x00: {
+			switch(opcode & 0x07) { //00000xxx
+				case 0x00: break;
+				case 0x01: {
+					switch((opcode & 0x08) >> 3) { //00rpx001
+						case 0x00: lxi(((opcode & 0x30) >> 4) * 2); break;
+						case 0x01: dad(((opcode & 0x30) >> 4) * 2); break;
+					}
+				} break;
+				case 0x02: {
+					switch((opcode & 0x38) >> 3) { //00rpx010
+						case 0x00: case 0x02: stax(((opcode & 0x10) >> 4) * 2); break;
+						case 0x01: case 0x03: ldax(((opcode & 0x10) >> 4) * 2); break;
+						case 0x04: //SHLD adr
+							loc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1];
+							memory[loc] = registers[0x05];
+							memory[loc+1] = registers[0x04];
 
-		case 0x01: //LXI B,D16
-			c = memory[pc+1];
-			b = memory[pc+2];	
-			pc += 2;	
-			
-			cycles += 6;
-			break;
+							pc += 2;
+							cycles += 12;
+							break;
+						case 0x05: //LHLD adr
+							loc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1];
+							registers[0x05] = memory[loc];
+							registers[0x04] = memory[loc+1];
 
-		case 0x02: //STAX B
-			memory[((uint16_t) b << 8) + c] = a;
-			
-			cycles += 3;
-			break;
-			
-		case 0x03: //INX B
-		{
-			uint16_t tmp = ((uint16_t) b << 8) + (c + 1);
-			c = (tmp & 0xff);
-			b = (tmp >> 8);
-			
-			cycles += 1;
-		}
-			break;
-			
-		case 0x04: //INR B
-			b = setCond8(b + 1, b, 1, 0x4);
-			
-			cycles += 1;
-			break;
-			
-		case 0x05: //DCR B
-			b = setCond8(b - 1, b, 1, 0x4);	
-			
-			cycles += 1;
-			break;
+							pc += 2;
+							cycles += 12;
+							break;
+						case 0x06: //STA adr
+							memory[(((uint16_t)memory[pc+2] << 8) + memory[pc+1])] = registers[0x08];
 
-		case 0x06: //MVI B, D8
-			b = memory[pc+1];
-			pc += 1;	
-			
-			cycles += 3;
-			break;
-			
-		case 0x07: //RLC
-			if((a & 0x80) == 0x80) {
-				cy = 1;
-				a = (a << 1) + 0x1; 
+							pc += 2;
+							cycles += 9;
+							break;
+						case 0x07: //LDA adr
+							registers[0x08] = memory[(((uint16_t)memory[pc+2] << 8) + memory[pc+1])];
+							
+							pc += 2;
+							cycles += 9;
+							break;
+					}
+				} break;
+				case 0x03: {
+					switch((opcode & 0x08) >> 3) { //00rpx011
+						case 0x00: inx(((opcode & 0x30) >> 4) * 2); break;
+						case 0x01: dcx(((opcode & 0x30) >> 4) * 2); break;
+					}
+				} break;
+				case 0x04: inr((opcode & 0x38) >> 3); break;
+				case 0x05: dcr((opcode & 0x38) >> 3); break;
+				case 0x06: mvi((opcode & 0x38) >> 3); break;
+				case 0x07: {
+					switch((opcode & 0x38) >> 3) { //00xxx111
+						case 0x00: //RLC
+							if((a & 0x80) == 0x80) {
+								cy = 1;
+								a = (a << 1) + 0x1; 
+							}
+							else {
+								cy = 0;
+								a = (a << 1);
+							}
+							break;
+						case 0x01: //RRC
+							if((a & 0x1) == 0x1) {
+								cy = 1;
+								a = (a >> 1) + 0x80; 
+							}
+							else {
+								cy = 0;
+								a = (a >> 1);
+							}
+							break;
+						case 0x02: //RAL
+							break;
+						case 0x03: //RAR
+							break;
+						case 0x04: //DAA
+							break;
+						case 0x05: //CMA
+							break;
+						case 0x06: //STC
+							break;
+						case 0x07: //CMC
+							break;
+					}
+				} break;
 			}
-			else {
+		} break;
+
+		case 0x01: {
+			if(opcode == 0x76)
+				//hlt
+			else
+				mov((opcode & 0x38) >> 3, opcode & 0x07);
+		} break;
+
+		case 0x02: {
+			math();
+		} break;
+
+		case 0x03: {
+			switch(opcode & 0x0f) {
+				case 0x00: case 0x08: retC((opcode & 0x38) >> 3); break;
+				case 0x01: pop(((opcode & 0x30) >> 4) * 2); break;
+				case 0x02: case 0x0a: jmpC((opcode & 0x38) >> 3); break;
+				case 0x03: {
+					switch((opcode & 0xf0) >> 4) {
+						case 0x00: jmp(); break;
+					}	
+				} break;
+				case 0x04: case 0x0c: callC((opcode & 0x38) >> 3); break;
+				case 0x05: push(((opcode & 0x30) >> 4) * 2); break;
+				case 0x06: case 0x0e: math(); break;
+				case 0x07: case 0x0f: rst(opcode & 0x38); break;
+				case 0x09: {
+					switch((opcode & 0xf0) >> 4) {
+						case 0x00: ret(); break;
+					}	
+				} break;
+				case 0x0b: {
+					switch((opcode & 0xf0) >> 4) {
+					}	
+				} break;
+				case 0x0d: {
+					switch((opcode & 0xf0) >> 4) {
+						case 0x00: call(); break;
+					}	
+				} break;
+			}
+		} break;
+	}
+			case 0xa7: //ANA A
+				a = setCond8(a & a, 0, 0, 0x2);
+				break;
+
+			case 0xaf: //XRA A
+				a = setCond8(a ^ a, a, a, 0x2);
 				cy = 0;
-				a = (a << 1);
-			}
-			break;
-			
-		case 0x09: //DAD B
-		{
-			uint32_t tmp = ((h << 8) + l) + ((b << 8) + c);
-			h = (tmp & 0xff00) >> 8;
-			l = tmp & 0xff;
-
-			cy = (tmp > 0xffff);
-			
-			cycles += 6;
-		}
-			break;
-			
-		case 0x0a: //LDAX B
-			a = memory[(b << 8) + c];
-			
-			cycles += 3;
-			break;
-			
-		case 0x0b: //DCX B
-		{
-			uint16_t tmp = ((uint16_t) b << 8) + c - 1;
-			c = (tmp & 0xff);
-			b = (tmp >> 8);
-		
-			cycles += 1;
-		}
-			break;
-			
-		case 0x0c: //INR C
-			c = setCond8(c + 1, c, 1, 0x4);	
-			
-			cycles += 1;
-			break;
-			
-		case 0x0d: //DCR C
-			c = setCond8(c - 1, c, 1, 0x4);	
-			
-			cycles += 1;
-			break;
-			
-		case 0x0e: //MVI C,D8
-			c = memory[pc+1];
-			pc += 1;	
-			
-			cycles += 3;
-			break;
-			
-		case 0x0f: //RRC
-			if((a & 0x1) == 0x1) {
-				cy = 1;
-				a = (a >> 1) + 0x80; 
-			}
-			else {
-				cy = 0;
-				a = (a >> 1);
-			}
-			break;
-
-		case 0x11: //LXI D,D16
-			e = memory[pc+1];
-			d = memory[pc+2];	
-			pc += 2;
-			
-			cycles += 6;
-			break;
-
-		case 0x12: //STAX D
-			memory[(d << 8) + e] = a;
-			
-			cycles += 3;
-			break;
-
-		case 0x13: //INX D
-		{
-			uint16_t tmp = ((uint16_t) d << 8) + e + 1;
-			e = (tmp & 0xff);
-			d = (tmp >> 8);
-			
-			cycles += 1;
-		}
-			break;
-
-		case 0x14: //INR D
-			d = setCond8(d + 1, d, 1, 0x4);
-			
-			cycles += 1;
-			break;
-
-		case 0x15: //DCR D
-			d = setCond8(d - 1, d, 1, 0x4);
-			
-			cycles += 1;
-			break;
-
-		case 0x16: //MVI D,D8
-			d = memory[pc+1];
-			pc += 1;	
-			
-			cycles += 3;
-			break;
-
-		case 0x17: //not done
-			break;
-
-		case 0x19: //DAD D
-		{
-			uint32_t tmp = ((h << 8) + l) + ((d << 8) + e);
-			h = (tmp & 0xff00) >> 8;
-			l = tmp & 0xff;
-
-			cy = (tmp > 0xffff);
-			
-			cycles += 6;
-		}
-			break;
-
-		case 0x1a: //LDAX D
-			a = memory[(d << 8) + e];
-			
-			cycles += 3;
-			break;
-
-		case 0x1b: //not done
-			break;
-
-		case 0x1c: //not done
-			break;
-
-		case 0x1d: //not done
-			break;
-
-		case 0x1e: //not done
-			pc += 1;
-			break;
-
-		case 0x1f: //not done
-			break;
-
-		case 0x21: //LXI H,D16
-			l = memory[pc+1];
-			h = memory[pc+2];
-			pc += 2;
-			
-			cycles += 6;
-			break;
-
-		case 0x22: //not done
-			pc += 2;
-			break;
-
-		case 0x23: //INX H
-		{
-			uint16_t tmp = ((uint16_t) h << 8) + l + 1;
-			l = (tmp & 0xff);
-			h = (tmp >> 8);
-			
-			cycles += 1;
-		}
-			break;
-
-		case 0x24: //not done
-			break;
-
-		case 0x25: //not done
-			break;
-
-		case 0x26: //MVI H,D8
-			h = memory[pc+1];
-			pc += 1;
-			
-			cycles += 3;
-			break;
-
-		case 0x27: //wolfy don't even dare to fucking attempt this one lmao (it's not needed and I'll do it later)
-			break;
-
-		case 0x29: //DAD H
-		{
-			uint32_t tmp = ((h << 8) + l) << 1;
-			h = (tmp & 0xff00) >> 8;
-			l = tmp & 0xff;
-
-			cy = (tmp > 0xffff);
-			
-			cycles += 6;
-		}
-			break;
-
-		case 0x2a: //LHLD adr
-		{
-			uint16_t loc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1];
-			l = memory[loc];
-			h = memory[loc+1];
-			pc += 2;
-			cycles += 12;
-		}
-			break;
-
-		case 0x2b: //not done
-			break;
-
-		case 0x2c: //not done
-			break;
-
-		case 0x2d: //not done
-			break;
-
-		case 0x2e: //not done
-			pc += 1;
-			break;
-
-		case 0x2f: //not done
-			break;
-
-		case 0x31: //LXI SP,D16
-			sp = (((uint16_t) memory[pc+2] << 8) + memory[pc+1]);
-			pc += 2;
-			
-			cycles += 6;
-			break;
-
-		case 0x32: //STA adr
-			memory[(((uint16_t)memory[pc+2] << 8) + memory[pc+1])] = a;
-			pc += 2;
-			
-			cycles += 9;
-			break;
-
-		case 0x33: //INX SP
-			sp += 1;
-			
-			cycles += 1;
-			break;
-
-		case 0x34: //INR M
-		{
-			int loc = (((uint16_t) h << 8) + l);
-
-			//cout << hex << loc << endl;
-			if((loc >= vramStart) && (loc < vramEnd))
-				vramChange(loc, memory[loc] + 1);
-
-			memory[loc] = setCond8(memory[loc] + 1, memory[loc], 1, 0x4);
-			
-			cycles += 6;
-		}
-			break;
-
-		case 0x35: //DEC M
-		{
-			int loc = (((uint16_t) h << 8) + l);
-
-			//cout << hex << loc << endl;
-			if((loc >= vramStart) && (loc < vramEnd))
-				vramChange(loc, memory[loc] - 1);
-
-			memory[loc] = setCond8(memory[loc] - 1, memory[loc], 1, 0x4);
-			
-			cycles += 6;
-		}
-			break;
-
-		case 0x36: //MVI M,D8
-		{
-			int loc = (((uint16_t) h << 8) + l);
-
-			//cout << hex << loc << endl;
-			if((loc >= vramStart) && (loc < vramEnd))
-				vramChange(loc, memory[pc+1]);
-			
-			memory[loc] = memory[pc+1];
-			
-			pc += 1;
-			
-			cycles += 6;
-		}
-			break;
-
-		case 0x37: //not done
-			break;
-
-		case 0x39: //not done
-			break;
-
-		case 0x3a: //LDA adr
-			a = memory[(((uint16_t)memory[pc+2] << 8) + memory[pc+1])];
-			pc += 2;
-			
-			cycles += 9;
-			break;
-
-		case 0x3b: //DCX SP
-			sp -= 1;
-			
-			cycles += 1;
-			break;
-
-		case 0x3c: //not done
-			break;
-
-		case 0x3d: //not done
-			break;
-
-		case 0x3e: //MVI A,D8
-			a = memory[pc+1];
-			pc += 1;
-			
-			cycles += 3;
-			break;
-
-		case 0x3f: //not done
-			break;
-
-		case 0x40: //MOV B,B
-			cycles += 1;
-			break;
-
-		case 0x41: //MOV B,C
-			b = c;
-			
-			cycles += 1;
-			break;
-
-		case 0x42: //MOV B,D
-			b = d;
-			
-			cycles += 1;
-			break;
-
-		case 0x43: //MOV B,E
-			b = e;
-			
-			cycles += 1;
-			break;
-
-		case 0x44: //MOV B,H
-			b = h;
-			
-			cycles += 1;
-			break;
-
-		case 0x45: //MOV B,L
-			b = l;
-			
-			cycles += 1;
-			break;
-
-		case 0x46: //MOV B,M
-			b = memory[(((uint16_t) h << 8) + l)];
-			
-			cycles += 3;
-			break;
-
-		case 0x47: //MOV B,A
-			b = a;
-			
-			cycles += 1;
-			break;
-
-		case 0x48: //MOV C,B
-			c = b;
-			
-			cycles += 1;
-			break;
-
-		case 0x49: //MOV C,C
-			cycles += 1;
-			break;
-
-		case 0x4a: //MOV C,D
-			c = d;
-			
-			cycles += 1;
-			break;
-
-		case 0x4b: //MOV C,E
-			c = e;
-			
-			cycles += 1;
-			break;
-
-		case 0x4c: //MOV C,H
-			c = h;
-			
-			cycles += 1;
-			break;
-
-		case 0x4d: //MOV C,L
-			c = l;
-			
-			cycles += 1;
-			break;
-
-		case 0x4e: //MOV C,M
-			c = memory[(((uint16_t) h << 8) + l)];
-			
-			cycles += 3;
-			break;
-
-		case 0x4f: //MOV C,A
-			c = a;
-			
-			cycles += 1;
-			break;
-
-		case 0x50: //not done
-			break;
-
-		case 0x51: //not done
-			break;
-
-		case 0x52: //not done
-			break;
-
-		case 0x53: //not done
-			break;
-
-		case 0x54: //not done
-			break;
-
-		case 0x55: //not done
-			break;
-
-		case 0x56: //MOV D,M
-			d = memory[(((uint16_t) h << 8) + l)];
-			
-			cycles += 3;
-			break;
-
-		case 0x57: //not done
-			break;
-
-		case 0x58: //not done
-			break;
-
-		case 0x59: //not done
-			break;
-
-		case 0x5a: //not done
-			break;
-
-		case 0x5b: //not done
-			break;
-
-		case 0x5c: //not done
-			break;
-
-		case 0x5d: //not done
-			break;
-
-		case 0x5e: //MOV E,M
-			e = memory[(((uint16_t) h << 8) + l)];
-			
-			cycles += 3;
-			break;
-
-		case 0x5f: //MOV E,A
-			e = a;
-			
-			cycles += 1;
-			break;
-
-		case 0x60: //not done
-			break;
-
-		case 0x61: //not done
-			break;
-
-		case 0x62: //not done
-			break;
-
-		case 0x63: //not done
-			break;
-
-		case 0x64: //not done
-			break;
-
-		case 0x65: //not done
-			break;
-
-		case 0x66: //MOV H,M
-			h = memory[(((uint16_t) h << 8) + l)];
-			
-			cycles += 3;
-			break;
-
-		case 0x67: //not done
-			break;
-
-		case 0x68: //not done
-			break;
-
-		case 0x69: //not done
-			break;
-
-		case 0x6a: //not done
-			break;
-
-		case 0x6b: //not done
-			break;
-
-		case 0x6c: //not done
-			break;
-
-		case 0x6d: //not done
-			break;
-
-		case 0x6e: //not done
-			break;
-
-		case 0x6f: //MOV L,A
-			l = a;
-			
-			cycles += 1;
-			break;
-
-		case 0x70: //not done
-			break;
-
-		case 0x71: //not done
-			break;
-
-		case 0x72: //not done
-			break;
-
-		case 0x73: //not done
-			break;
-
-		case 0x74: //not done
-			break;
-
-		case 0x75: //not done
-			break;
-
-		case 0x76: //not done
-			break;
-
-		case 0x77: //MOV M,A
-		{
-			int loc = (((uint16_t) h << 8) + l);
-
-			//cout << hex << loc << endl;
-			if((loc >= vramStart) && (loc < vramEnd))
-				vramChange(loc, a);
-			else if((loc >= vramStart*2) && (loc < vramEnd*2))
-				vramChange(loc-0x4000, a);
-			
-			memory[loc] = a;
-			
-			cycles += 3;
-		}			
-			break;
-
-		case 0x78: //MOV A,B
-			a = b;
-			
-			cycles += 1;
-			break;
-
-		case 0x79: //MOV A,C
-			a = c;
-			
-			cycles += 1;
-			break;
-
-		case 0x7a: //MOV A,D
-			a = d;
-			
-			cycles += 1;
-			break;
-
-		case 0x7b: //MOV A,E
-			a = e;
-			
-			cycles += 1;
-			break;
-
-		case 0x7c: //MOV A,H
-			a = h;
-			
-			cycles += 1;
-			break;
-
-		case 0x7d: //MOV A,L
-			a = l;
-			
-			cycles += 1;
-			break;
-
-		case 0x7e: //MOV A,M
-			a = memory[(((uint16_t) h << 8) + l)];
-			
-			cycles += 3;
-			break;
-
-		case 0x7f: //not done
-			break;
-
-		case 0x80: //not done
-			break;
-
-		case 0x81: //not done
-			break;
-
-		case 0x82: //not done
-			break;
-
-		case 0x83: //not done
-			break;
-
-		case 0x84: //not done
-			break;
-
-		case 0x85: //not done
-			break;
-
-		case 0x86: //not done
-			break;
-
-		case 0x87: //not done
-			break;
-
-		case 0x88: //not done
-			break;
-
-		case 0x89: //not done
-			break;
-
-		case 0x8a: //not done
-			break;
-
-		case 0x8b: //not done
-			break;
-
-		case 0x8c: //not done
-			break;
-
-		case 0x8d: //not done
-			break;
-
-		case 0x8e: //not done
-			break;
-
-		case 0x8f: //not done
-			break;
-
-		case 0x90: //not done
-			break;
-
-		case 0x91: //not done
-			break;
-
-		case 0x92: //not done
-			break;
-
-		case 0x93: //not done
-			break;
-
-		case 0x94: //not done
-			break;
-
-		case 0x95: //not done
-			break;
-
-		case 0x96: //not done
-			break;
-
-		case 0x97: //not done
-			break;
-
-		case 0x98: //not done
-			break;
-
-		case 0x99: //not done
-			break;
-
-		case 0x9a: //not done
-			break;
-
-		case 0x9b: //not done
-			break;
-
-		case 0x9c: //not done
-			break;
-
-		case 0x9d: //not done
-			break;
-
-		case 0x9e: //not done
-			break;
-
-		case 0x9f: //not done
-			break;
-
-		case 0xa0: //not done
-			break;
-
-		case 0xa1: //not done
-			break;
-
-		case 0xa2: //not done
-			break;
-
-		case 0xa3: //not done
-			break;
-
-		case 0xa4: //not done
-			break;
-
-		case 0xa5: //not done
-			break;
-
-		case 0xa6: //not done
-			break;
-
-		case 0xa7: //ANA A
-			a = setCond8(a & a, 0, 0, 0x2);
-			break;
-
-		case 0xa8: //not done
-			break;
-
-		case 0xa9: //not done
-			break;
-
-		case 0xaa: //not done
-			break;
-
-		case 0xab: //not done
-			break;
-
-		case 0xac: //not done
-			break;
-
-		case 0xad: //not done
-			break;
-
-		case 0xae: //not done
-			break;
-
-		case 0xaf: //XRA A
-			a = setCond8(a ^ a, a, a, 0x2);
-			cy = 0;
-			break;
-
-		case 0xb0: //not done
-			break;
-
-		case 0xb1: //not done
-			break;
-
-		case 0xb2: //not done
-			break;
-
-		case 0xb3: //not done
-			break;
-
-		case 0xb4: //not done
-			break;
-
-		case 0xb5: //not done
-			break;
-
-		case 0xb6: //not done
-			break;
-
-		case 0xb7: //not done
-			break;
-
-		case 0xb8: //not done
-			break;
-
-		case 0xb9: //not done
-			break;
-
-		case 0xba: //not done
-			break;
-
-		case 0xbb: //not done
-			break;
-
-		case 0xbc: //not done
-			break;
-
-		case 0xbd: //not done
-			break;
-
-		case 0xbe: //not done
-			break;
-
-		case 0xbf: //not done
-			break;
-
-		case 0xc0: //not done
-			break;
-
-		case 0xc1: //POP B
-			c = memory[sp];
-			b = memory[sp+1];
-			sp += 2;
-			
-			cycles += 6;
-			break;
-
-		case 0xc2: //JNZ adr
-			if(z == 0) {
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-				//cout << hex << +pc << "\n";
-
-				cycles += 6;
-			}
-			else
-				pc += 2;
-			break;
-
-		case 0xc3: //JMP adr
-			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-
-			//cout << hex << +pc << "\n";
-			
-			cycles += 6;
-			break;
-
-		case 0xc4: //CNZ adr
-			if(z == 0) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
-
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
-				cycles += 13;
-			}
-			else {
-				cycles += 7;
-				pc += 2;
-			}
-			break;
-
-		case 0xc5: //PUSH B
-			memory[sp-2] = c;
-			memory[sp-1] = b;
-			sp -= 2;
-			
-			cycles += 7;
-			break;
-
-		case 0xc6: //ADI D8
-			a = setCond8(a + memory[pc+1], a, memory[pc+1], 0x4);
-			pc += 1;
-			
-			cycles += 3;
-			break;
-
-		case 0xc7: //not done
-			break;
-
-		case 0xc8: //RZ
-			if(z) {
-				pc = ((uint16_t) memory[sp+1] << 8) + memory[sp] + 2;
-				sp += 2;
+				break;
+
+			case 0xc6: //ADI D8
+				a = setCond8(a + memory[pc+1], a, memory[pc+1], 0x4);
+				pc += 1;
 				
-				cycles += 7;
-			}
+				cycles += 3;
+				break;
 
-			cycles += 1;
-			break;
+			case 0xc8: //RZ
+				if(z) {
+					pc = ((uint16_t) memory[sp+1] << 8) + memory[sp] + 2;
+					sp += 2;
+					
+					cycles += 7;
+				}
 
-		case 0xc9: //RET
-			pc = ((uint16_t) memory[sp+1] << 8) + memory[sp] + 2;
-			sp += 2;
-			
-			cycles += 6;
-			break;
+				cycles += 1;
+				break;
 
-		case 0xca: //JZ adr
-			if(z) {
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+			case 0xd3: //OUT D8
+				port[memory[pc+1]] = a;
+				pc += 1;
 				
 				cycles += 6;
-			}
-			else
-				pc += 2;
-			break;
+				break;
 
-		case 0xcc: //CZ adr
-			if(z) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
-
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
-				cycles += 13;
-			}
-			else {
-				cycles += 7;
-				pc += 2;
-			}
-			break;
-
-		case 0xcd: //CALL adr
-			memory[sp-2] = pc & 0xff;
-			memory[sp-1] = (pc & 0xff00) >> 8;
-			sp -= 2;
-
-			pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-
-			cycles += 13;
-			break;
-
-		case 0xce: //not done
-			pc += 1;
-			break;
-
-		case 0xcf: //RST 1
-			memory[sp-2] = pc & 0xff;
-			memory[sp-1] = (pc & 0xff00) >> 8;
-			sp -= 2;
-
-			pc = 0x8 - 1;
-			
-			cycles += 11;
-			break;
-
-		case 0xd0: //not done
-			break;
-
-		case 0xd1: //POP D
-			e = memory[sp];
-			d = memory[sp+1];
-			sp += 2;
-			
-			cycles += 6;
-			break;
-
-		case 0xd2: //not done
-			pc += 2;
-			break;
-
-		case 0xd3: //OUT D8
-			port[memory[pc+1]] = a;
-			pc += 1;
-			
-			cycles += 6;
-			break;
-
-		case 0xd4: //CNC adr
-			if(cy == 0) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
-
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
-				cycles += 13;
-			}
-			else {
-				cycles += 7;
-				pc += 2;
-			}
-			break;
-
-		case 0xd5: //PUSH D
-			memory[sp-2] = e;
-			memory[sp-1] = d;
-			sp -= 2;
-			
-			cycles += 7;
-			break;
-
-		case 0xd6: //not done
-			pc += 1;
-			break;
-
-		case 0xd7: //RST 1
-			memory[sp-2] = pc & 0xff;
-			memory[sp-1] = (pc & 0xff00) >> 8;
-			sp -= 2;
-
-			pc = 0x10 - 1;
-
-			cycles += 11;
-			break;
-
-		case 0xd8: //not done
-			break;
-
-		case 0xda: //JC adr
-			if(cy) {
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+			case 0xde: //SBI D8
+				a = setCond8(a - memory[pc+1] - cy, a, memory[pc+1] + cy, 0x4);
+				pc += 1;
 				
-				cycles += 6;
+				cycles += 3;
+				break;
+
+			case 0xe6: //ANI D8
+				a = setCond8(a & memory[pc+1], a, memory[pc+1], 0x4);
+				pc += 1;
+				
+				cycles += 3;
+				break;
+
+			case 0xe9: //PCHL
+				pc = ((uint16_t) h << 8) + l - 1;
+				break;
+
+			case 0xeb: //XCHG 
+			{
+				uint8_t tmp2 = e;
+				uint8_t tmp1 = d;
+				e = l;
+				d = h;
+				l = tmp2;
+				h = tmp1;
 			}
-			else
-				pc += 2;
-			break;
+				break;
 
-		case 0xdb: //not done
-			pc += 1;
-			break;
+			case 0xf3: //DI
+				interrupt = false;
+				break;
 
-		case 0xdc: //CC adr
-			if(cy) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
+			case 0xf9: //SPHL
+				sp = ((uint16_t) h << 8) + l;
+				break;
 
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
-				cycles += 13;
-			}
-			else {
-				cycles += 7;
-				pc += 2;
-			}
-			break;
+			case 0xfb: //EI
+				interrupt = true;
+				break;
 
-		case 0xde: //SBI D8
-			a = setCond8(a - memory[pc+1] - cy, a, memory[pc+1] + cy, 0x4);
-			pc += 1;
-			
-			cycles += 3;
-			break;
-
-		case 0xdf: //RST 3 (not needed)
-			break;
-
-		case 0xe0: //not done
-			break;
-
-		case 0xe1: //POP H
-			l = memory[sp];
-			h = memory[sp+1];
-			sp += 2;
-			
-			cycles += 6;
-			break;
-
-		case 0xe2: //not done
-			pc += 2;
-			break;
-
-		case 0xe3: //not done
-			break;
-
-		case 0xe4: //CPO adr
-			if(p == 0) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
-
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
-				cycles += 13;
-			}
-			else {
-				cycles += 7;
-				pc += 2;
-			}
-			break;
-
-		case 0xe5: //PUSH H
-			memory[sp-2] = l;
-			memory[sp-1] = h;
-			sp -= 2;
-			
-			cycles += 7;
-			break;
-
-		case 0xe6: //ANI D8
-			a = setCond8(a & memory[pc+1], a, memory[pc+1], 0x4);
-			pc += 1;
-			
-			cycles += 3;
-			break;
-
-		case 0xe7: //RST 4 (not needed)
-			break;
-
-		case 0xe8: //not done
-			break;
-
-		case 0xe9: //PCHL
-			pc = ((uint16_t) h << 8) + l - 1;
-			break;
-
-		case 0xea: //not done
-			pc += 2;
-			break;
-
-		case 0xeb: //XCHG 
-		{
-			uint8_t tmp2 = e;
-			uint8_t tmp1 = d;
-			e = l;
-			d = h;
-			l = tmp2;
-			h = tmp1;
-		}
-			break;
-
-		case 0xec: //CPE adr
-			if(p) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
-
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
-				cycles += 13;
-			}
-			else {
-				cycles += 7;
-				pc += 2;
-			}
-			break;
-
-		case 0xee: //not done
-			pc += 1;
-			break;
-
-		case 0xef: //RST 5 (not needed)
-			break;
-
-		case 0xf0: //not done
-			break;
-
-		case 0xf1: //POP PSW
-		{
-			uint8_t flags = memory[sp];
-			cy = flags & 0x1;
-			ac = (flags & 0x10) >> 4;
-			s  = (flags & 0x80) >> 7;
-			z  = (flags & 0x40) >> 6;
-			p  = (flags & 0x4) >> 2;
-			a = memory[sp+1];
-			sp += 2;
-			
-			cycles += 6;
-		}
-			break;
-
-		case 0xf2: //not done
-			pc += 2;
-			break;
-
-		case 0xf3: //DI
-			interrupt = false;
-			break;
-
-		case 0xf4: //CP adr
-			if(s == 0) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
-
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
-				cycles += 13;
-			}
-			else {
-				cycles += 7;
-				pc += 2;
-			}
-			break;
-
-		case 0xf5: //PUSH PSW
-		{
-			memory[sp-2] = (s << 7) + (z << 6) + (ac << 4) + (p << 2) + 0x2 + cy;
-			memory[sp-1] = a;
-			sp -= 2;
-			
-			cycles += 7;
-		}
-			break;
-
-		case 0xf6: //not done
-			pc += 1;
-			break;
-
-		case 0xf7: //RST 6 (not needed)
-			break;
-
-		case 0xf8: //not done
-			break;
-
-		case 0xf9: //SPHL
-			sp = ((uint16_t) h << 8) + l;
-			break;
-
-		case 0xfa: //JM adr
-			if(s) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
-
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
-				cycles += 6;
-			}
-			else
-				pc += 2;
-
-			break;
-
-		case 0xfb: //EI
-			interrupt = true;
-			break;
-
-		case 0xfc: //CM adr
-			if(s) {
-				memory[sp-2] = pc & 0xff;
-				memory[sp-1] = (pc & 0xff00) >> 8;
-				sp -= 2;
-
-				pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
-			
-				cycles += 13;
-			}
-			else {
-				cycles += 7;
-				pc += 2;
-			}
-			break;
-
-		case 0xfe: //CPI D8
-			setCond8(a - memory[pc+1], a, memory[pc+1], 0x4);
-			cy = (a < memory[pc+1]);
-			pc += 1;
-			
-			cycles += 3;
-			break;
-
-		case 0xff: //RST 7 (not needed)
-			break;
-	}	
+			case 0xfe: //CPI D8
+				setCond8(a - memory[pc+1], a, memory[pc+1], 0x4);
+				cy = (a < memory[pc+1]);
+				pc += 1;
+				
+				cycles += 3;
+				break;
+		}	
 	pc++;
- 
+	cycles += 4;
+}
+
+bool si8080::checkCond(uint8_t reg) {
+	if((reg == 0x00 && z == 0) || (reg == 0x01 && z) || (reg == 0x02 && cy == 0) || (reg == 0x03 && cy) || (reg == 0x04 && p == 0) || (reg == 0x05 && p) || (reg == 0x06 && s == 0) || (reg == 0x07 && s))
+		return true;
+
+	return false;
 }
 
 //flags - 0x2 logic inst 0x4 math inst
-//also make sure diff is the thing you're adding/subtracting from the original (so the thing right of the operation)
-uint8_t si8080::setCond8(int16_t ans, uint8_t old, uint8_t diff, uint8_t flags) {
+uint8_t si8080::setCond8(uint16_t ans, uint8_t old, uint8_t diff, uint8_t flags) {
 	if((flags & 0x2) == 0x2) {
 		cy = 0;
 		ac = 0;
-		s = ((a & 0x80) == 0x80);
-		z = (a == 0);
-		p = checkParity(a & 0xff);
+		s = ((registers[0x08] & 0x80) == 0x80);
+		z = (registers[0x08] == 0);
+		p = checkParity(registers[0x08] & 0xff);
 	}
 	if((flags & 0x4) == 0x4) {
 		cy = (ans > 0xff);
@@ -1444,18 +372,13 @@ uint8_t si8080::checkAC(uint8_t ans, uint16_t diff, uint16_t old) {
 		return ((old & 0x8) == 0 && (diff & 0x8) == 1);
 	}
 
-the above is my own personal way of doing it but somebody showed me a much simplier way so I decided to use that instead
+the above is my own personal way of doing it but somebody showed me a much simplier way so I decided to use that instead*/
 
-ha idiot
-*/
-
-void si8080::vramChange(uint16_t loc, uint8_t value) { //it's right now :D
-	bool forceStopRendering = true;
-	if(forceStopRendering) {
+void si8080::changeM(uint8_t value) { //it's right now :D
+	if(loc > vramStart) {
 		//cout << hex << +value << endl;
-		
-		loc -= vramStart;
-		int offset = loc * 8; 
+
+		int offset = (loc - vramStart) * 8; 
 		int x = offset / 256;
 		int y = 255 - (offset % 256);
 		
@@ -1482,6 +405,8 @@ void si8080::vramChange(uint16_t loc, uint8_t value) { //it's right now :D
 		
 		drawFlag = true;
 	}
+
+	memory[loc] = value;
 } 
 
 string si8080::load(const char* filename) {		
@@ -1494,7 +419,7 @@ string si8080::load(const char* filename) {
 		romSize = ftell(rom);
 		vramStart = romSize + 0x400;
 		vramEnd = vramStart + 0x1C00;
-		sp = romSize + 0x400;	
+		sp = vramStart;	
 		rewind(rom);
 		
 		char* buffer = (char*)malloc(sizeof(char) * romSize);
@@ -1523,4 +448,218 @@ string si8080::load(const char* filename) {
 	}
 
 	return "";
+}
+
+void si8080::lxi(uint8_t reg) {
+	uint32_t tmp = ((uint16_t) memory[pc+2] << 8) + memory[pc+1];
+	if(reg == 0x08) {
+		sp = tmp;
+	}
+	else {
+		registers[reg+1] = tmp & 0xff;
+		registers[reg] = (tmp & 0xff00) >> 8;
+	}
+
+	pc += 2;
+	cycles += 6;
+} 
+
+void si8080::dad(uint8_t reg) {
+	uint32_t tmp = 0;
+	if(reg == 0x08) {
+		tmp = ((registers[0x04] << 8) + registers[0x05]) + sp;
+	}
+	else {
+		tmp = ((registers[0x04] << 8) + registers[0x05]) + ((registers[reg] << 8) + registers[reg+1]);
+	}
+
+	registers[0x05] = tmp & 0xff;
+	registers[0x04] = (tmp & 0xff00) >> 8;
+	cy = (tmp > 0xffff);
+
+	cycles += 6;
+} 
+
+void si8080::stax(uint8_t reg) {
+	memory[((uint16_t) registers[reg] << 8) + registers[reg+1]] = registers[0x08];
+	
+	cycles += 3;
+}
+
+void si8080::ldax(uint8_t reg) {
+	registers[0x08] = memory[((uint16_t) registers[reg] << 8) + registers[reg+1]];
+	
+	cycles += 3;
+}
+
+void si8080::inx(uint8_t reg) {
+ 	if(reg == 0x08) {
+		sp += 1;
+	}
+	else {
+		uint32_t tmp = ((registers[reg] << 8) + registers[reg+1]) + 1;
+		registers[reg+1] = tmp & 0xff;
+		registers[reg] = (tmp & 0xff00) >> 8;
+	}
+	
+	cycles += 1;
+}
+
+void si8080::dcx(uint8_t reg) {
+	if(reg == 0x08) {
+		sp -= 1;
+	}
+	else {
+		uint32_t tmp = ((registers[reg] << 8) + registers[reg+1]) - 1;
+		registers[reg+1] = tmp & 0xff;
+		registers[reg] = (tmp & 0xff00) >> 8;
+	}
+
+	cycles += 1;
+}
+				
+void si8080::inr(uint8_t reg) {
+	if(reg == 0x06) {
+		changeM(setCond8(memory[loc] + 1, memory[loc], 1, 0x4));
+		cycles += 5;
+	} 
+	else
+		registers[reg] = setCond8(registers[reg] + 1, registers[reg], 1, 0x4);
+
+	cycles += 1;
+} 
+
+void si8080::dcr(uint8_t reg) {
+	if(reg == 0x06) {
+		changeM(setCond8(memory[loc] - 1, memory[loc], 1, 0x4));
+		cycles += 5;
+	} 
+	else
+		registers[reg] = setCond8(registers[reg] - 1, registers[reg], 1, 0x4);
+
+	cycles += 1;
+} 
+
+void si8080::mvi(uint8_t reg) {
+	if(reg == 0x06) {
+		changeM(memory[pc+1]);
+		cycles += 3;
+	} 
+	else 
+		registers[reg] = memory[pc+1];
+
+	pc += 1;
+	cycles += 3;
+} 
+
+void si8080::mov(uint8_t dst, uint8_t src) {
+	if(dst == 0x06) {
+		changeM(registers[src]);
+		cycles += 2;
+	}
+	else if(src == 0x06) {
+		registers[dst] = memory[loc];
+		cycles += 2;
+	}
+	else {
+		registers[dst] = registers[src];
+	}
+
+	cycles += 1;
+}
+
+void si8080::math() {
+	
+}
+
+void si8080::retC(uint8_t reg) {
+	if(checkCond(reg)) {
+		call();
+	}
+
+	cycles += 1;
+}
+
+void si8080::pop(uint8_t reg) {
+	if(reg == 0x08) {
+		uint8_t flags = memory[sp];
+		cy = flags & 0x1;
+		ac = (flags & 0x10) >> 4;
+		s  = (flags & 0x80) >> 7;
+		z  = (flags & 0x40) >> 6;
+		p  = (flags & 0x4) >> 2;
+		registers[reg] = memory[sp+1];
+	}
+	else {
+		registers[reg+1] = memory[sp];
+		registers[reg] = memory[sp+1];
+	}
+
+	sp += 2;
+	cycles += 6;
+}
+
+void si8080::jmpC(uint8_t reg) {
+	if(checkCond(reg)) {
+		jmp();
+	}
+	else {
+		pc += 2;
+	}
+}
+
+void si8080::callC(uint8_t reg) {
+	if(checkCond(reg)) {
+		call();
+	}
+	else {
+		cycles += 7;
+		pc += 2;
+	}
+}
+
+void si8080::push(uint8_t reg) {
+	if(reg == 0x08) {
+		memory[sp-2] = (s << 7) + (z << 6) + (ac << 4) + (p << 2) + 0x2 + cy;
+		memory[sp-1] = registers[reg];
+	}
+	else {
+		memory[sp] = registers[reg+1];
+		memory[sp+1] = registers[reg];
+	}
+
+	sp -= 2;
+	cycles += 7;
+}
+
+void si8080::rst(uint8_t reg) {
+	memory[sp-2] = pc & 0xff;
+	memory[sp-1] = (pc & 0xff00) >> 8;
+	sp -= 2;
+
+	pc = reg - 1;
+	cycles += 7;
+}
+
+void si8080::jmp() {
+	pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+	cycles += 6;
+}
+
+void si8080::ret() {
+	memory[sp-2] = pc & 0xff;
+	memory[sp-1] = (pc & 0xff00) >> 8;
+	sp -= 2;
+
+	pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+	cycles += 6;
+}
+
+void si8080::call() {
+	memory[sp-2] = pc & 0xff;
+	memory[sp-1] = (pc & 0xff00) >> 8;
+	sp -= 2;
+
+	pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+	cycles += 13;
 }
