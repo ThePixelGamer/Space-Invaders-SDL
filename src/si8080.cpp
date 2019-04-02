@@ -228,11 +228,7 @@ void si8080::emulateCycle(uint8_t opcode) {
 					switch((opcode & 0xf0) >> 4) {
 					}	
 				} break;
-				case 0x0d: {
-					switch((opcode & 0xf0) >> 4) {
-						case 0x00: call(); break;
-					}	
-				} break;
+				case 0x0d: call(); break;
 			}
 		} break;
 	}
@@ -569,7 +565,7 @@ void si8080::mov(uint8_t dst, uint8_t src) {
 }
 
 void si8080::math() {
-	
+
 }
 
 void si8080::retC(uint8_t reg) {
