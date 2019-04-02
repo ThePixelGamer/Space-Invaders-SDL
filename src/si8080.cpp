@@ -102,20 +102,20 @@ void si8080::emulateCycle(uint8_t opcode) {
 		cout << "\tCarry: " << +cy << "\tAux Carry: " << +ac << "\tSign: " << +s << "\tZero: " << +z << "\tParity: " << +p << "\n";
 	}
 
-	switch((opcode & 0xc0) >> 6) { //xx000000
+	switch((opcode >> 6) & 0b11000000) { //xx000000
 		case 0x00: {
-			switch(opcode & 0x07) { //00000xxx
+			switch(opcode & 0b0111) { //00000xxx
 				case 0x00: break;
 				case 0x01: {
-					switch((opcode & 0x08) >> 3) { //00rpx001
-						case 0x00: lxi(((opcode & 0x30) >> 4) * 2); break;
-						case 0x01: dad(((opcode & 0x30) >> 4) * 2); break;
+					switch((opcode >> 3) & 0b0001) { //00rpx001
+						case 0x00: lxi((opcode >> 3) & 0b0110); break;
+						case 0x01: dad((opcode >> 3) & 0b0110); break;
 					}
 				} break;
 				case 0x02: {
-					switch((opcode & 0x38) >> 3) { //00rpx010
-						case 0x00: case 0x02: stax(((opcode & 0x10) >> 4) * 2); break;
-						case 0x01: case 0x03: ldax(((opcode & 0x10) >> 4) * 2); break;
+					switch((opcode >> 3) & 0b0111) { //00xrx010
+						case 0x00: case 0x02: stax((opcode >> 3) & 0b0010); break;
+						case 0x01: case 0x03: ldax((opcode >> 3) & 0b0010); break;
 						case 0x04: //SHLD adr
 							loc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1];
 							memory[loc] = registers[0x05];
@@ -147,16 +147,16 @@ void si8080::emulateCycle(uint8_t opcode) {
 					}
 				} break;
 				case 0x03: {
-					switch((opcode & 0x08) >> 3) { //00rpx011
-						case 0x00: inx(((opcode & 0x30) >> 4) * 2); break;
-						case 0x01: dcx(((opcode & 0x30) >> 4) * 2); break;
+					switch((opcode >> 3) & 0b0001) { //00rpx011
+						case 0x00: inx((opcode >> 3) & 0b0110); break;
+						case 0x01: dcx((opcode >> 3) & 0b0110); break;
 					}
 				} break;
-				case 0x04: inr((opcode & 0x38) >> 3); break;
-				case 0x05: dcr((opcode & 0x38) >> 3); break;
-				case 0x06: mvi((opcode & 0x38) >> 3); break;
+				case 0x04: inr((opcode >> 3) & 0b0111); break;
+				case 0x05: dcr((opcode >> 3) & 0b0111); break;
+				case 0x06: mvi((opcode >> 3) & 0b0111); break;
 				case 0x07: {
-					switch((opcode & 0x38) >> 3) { //00xxx111
+					switch((opcode >> 3) & 0b0111) { //00xxx111
 						case 0x00: //RLC
 							if((a & 0x80) == 0x80) {
 								cy = 1;
@@ -198,7 +198,7 @@ void si8080::emulateCycle(uint8_t opcode) {
 			if(opcode == 0x76)
 				//hlt
 			else
-				mov((opcode & 0x38) >> 3, opcode & 0x07);
+				mov((opcode >> 3) & 0b0111, opcode & 0b0111);
 		} break;
 
 		case 0x02: {
@@ -207,25 +207,25 @@ void si8080::emulateCycle(uint8_t opcode) {
 
 		case 0x03: {
 			switch(opcode & 0x0f) {
-				case 0x00: case 0x08: retC((opcode & 0x38) >> 3); break;
-				case 0x01: pop(((opcode & 0x30) >> 4) * 2); break;
-				case 0x02: case 0x0a: jmpC((opcode & 0x38) >> 3); break;
+				case 0x00: case 0x08: retC((opcode >> 3) & 0b0111); break;
+				case 0x01: pop((opcode >> 3) & 0b0110); break;
+				case 0x02: case 0x0a: jmpC((opcode >> 3) & 0b0111); break;
 				case 0x03: {
-					switch((opcode & 0xf0) >> 4) {
+					switch((opcode >> 4) & 0xf) {
 						case 0x00: jmp(); break;
 					}	
 				} break;
-				case 0x04: case 0x0c: callC((opcode & 0x38) >> 3); break;
-				case 0x05: push(((opcode & 0x30) >> 4) * 2); break;
+				case 0x04: case 0x0c: callC((opcode >> 3) & 0b0111); break;
+				case 0x05: push((opcode >> 3) & 0b0110); break;
 				case 0x06: case 0x0e: math(); break;
-				case 0x07: case 0x0f: rst(opcode & 0x38); break;
+				case 0x07: case 0x0f: rst(opcode & 0b01110000); break;
 				case 0x09: {
-					switch((opcode & 0xf0) >> 4) {
+					switch((opcode >> 4) & 0xf) {
 						case 0x00: ret(); break;
 					}	
 				} break;
 				case 0x0b: {
-					switch((opcode & 0xf0) >> 4) {
+					switch((opcode >> 4) & 0xf) {
 					}	
 				} break;
 				case 0x0d: call(); break;
@@ -448,12 +448,12 @@ string si8080::load(const char* filename) {
 
 void si8080::lxi(uint8_t reg) {
 	uint32_t tmp = ((uint16_t) memory[pc+2] << 8) + memory[pc+1];
-	if(reg == 0x08) {
+	if(reg == 0b0110) {
 		sp = tmp;
 	}
 	else {
 		registers[reg+1] = tmp & 0xff;
-		registers[reg] = (tmp & 0xff00) >> 8;
+		registers[reg] = (tmp >> 8) & 0xff;
 	}
 
 	pc += 2;
@@ -462,7 +462,7 @@ void si8080::lxi(uint8_t reg) {
 
 void si8080::dad(uint8_t reg) {
 	uint32_t tmp = 0;
-	if(reg == 0x08) {
+	if(reg == 0b0110) {
 		tmp = ((registers[0x04] << 8) + registers[0x05]) + sp;
 	}
 	else {
@@ -470,52 +470,53 @@ void si8080::dad(uint8_t reg) {
 	}
 
 	registers[0x05] = tmp & 0xff;
-	registers[0x04] = (tmp & 0xff00) >> 8;
+	registers[0x04] = (tmp >> 8) & 0xff;
 	cy = (tmp > 0xffff);
 
 	cycles += 6;
 } 
 
 void si8080::stax(uint8_t reg) {
-	memory[((uint16_t) registers[reg] << 8) + registers[reg+1]] = registers[0x08];
+	loc = ((uint16_t) registers[reg] << 8) + registers[reg+1];
+	changeM(registers[0x07]);
 	
 	cycles += 3;
 }
 
 void si8080::ldax(uint8_t reg) {
-	registers[0x08] = memory[((uint16_t) registers[reg] << 8) + registers[reg+1]];
+	registers[0x07] = memory[((uint16_t) registers[reg] << 8) + registers[reg+1]];
 	
 	cycles += 3;
 }
 
 void si8080::inx(uint8_t reg) {
- 	if(reg == 0x08) {
+ 	if(reg == 0b0110) {
 		sp += 1;
 	}
 	else {
 		uint32_t tmp = ((registers[reg] << 8) + registers[reg+1]) + 1;
 		registers[reg+1] = tmp & 0xff;
-		registers[reg] = (tmp & 0xff00) >> 8;
+		registers[reg] = (tmp >> 8) & 0xff;
 	}
 	
 	cycles += 1;
 }
 
 void si8080::dcx(uint8_t reg) {
-	if(reg == 0x08) {
+	if(reg == 0b0110) {
 		sp -= 1;
 	}
 	else {
 		uint32_t tmp = ((registers[reg] << 8) + registers[reg+1]) - 1;
 		registers[reg+1] = tmp & 0xff;
-		registers[reg] = (tmp & 0xff00) >> 8;
+		registers[reg] = (tmp >> 8) & 0xff;
 	}
 
 	cycles += 1;
 }
 				
 void si8080::inr(uint8_t reg) {
-	if(reg == 0x06) {
+	if(reg == 0b0110) {
 		changeM(setCond8(memory[loc] + 1, memory[loc], 1, 0x4));
 		cycles += 5;
 	} 
@@ -526,7 +527,7 @@ void si8080::inr(uint8_t reg) {
 } 
 
 void si8080::dcr(uint8_t reg) {
-	if(reg == 0x06) {
+	if(reg == 0b0110) {
 		changeM(setCond8(memory[loc] - 1, memory[loc], 1, 0x4));
 		cycles += 5;
 	} 
@@ -537,7 +538,7 @@ void si8080::dcr(uint8_t reg) {
 } 
 
 void si8080::mvi(uint8_t reg) {
-	if(reg == 0x06) {
+	if(reg == 0b0110) {
 		changeM(memory[pc+1]);
 		cycles += 3;
 	} 
@@ -549,11 +550,11 @@ void si8080::mvi(uint8_t reg) {
 } 
 
 void si8080::mov(uint8_t dst, uint8_t src) {
-	if(dst == 0x06) {
+	if(dst == 0b0110) {
 		changeM(registers[src]);
 		cycles += 2;
 	}
-	else if(src == 0x06) {
+	else if(src == 0b0110) {
 		registers[dst] = memory[loc];
 		cycles += 2;
 	}
@@ -577,7 +578,7 @@ void si8080::retC(uint8_t reg) {
 }
 
 void si8080::pop(uint8_t reg) {
-	if(reg == 0x08) {
+	if(reg == 0b0110) {
 		uint8_t flags = memory[sp];
 		cy = flags & 0x1;
 		ac = (flags & 0x10) >> 4;
@@ -615,7 +616,7 @@ void si8080::callC(uint8_t reg) {
 }
 
 void si8080::push(uint8_t reg) {
-	if(reg == 0x08) {
+	if(reg == 0b0110) {
 		memory[sp-2] = (s << 7) + (z << 6) + (ac << 4) + (p << 2) + 0x2 + cy;
 		memory[sp-1] = registers[reg];
 	}
