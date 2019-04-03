@@ -16,7 +16,7 @@ SDL_Window*		window;
 const Uint8*	state;
 si8080* core = new si8080();
 bool run = true;
-uint8_t vInterrupt = 0xcf;
+bool vInterrupt = 1;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
@@ -25,7 +25,7 @@ int main(int argc, char* args[]) {
 		cout << "Loaded: " << core->load(args[1]) << "\t" << "\n";
 	}
 	else {
-		cout << "Loaded: " << "Space Invaders 8192" << "\t" << "\n";
+		cout << "Loaded: " << core->load("invaders.com") << "\t" << "\n";
 	}
 
 	SDL_Renderer*				renderer;
@@ -40,7 +40,7 @@ int main(int argc, char* args[]) {
 	window = SDL_CreateWindow("Space Invaders", (DM.w/2)-(SCREEN_WIDTH/2), (DM.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALWAYS_ON_TOP);
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED /*| SDL_RENDERER_PRESENTVSYNC*/);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	
+
 	while(run) {
 		//Handle Updates
 		while(SDL_PollEvent(&event)) {
@@ -71,14 +71,16 @@ int main(int argc, char* args[]) {
 		core->cycCount = 0;
 		
 		while(core->cycCount <= CYCLES_EVERY_FRAME) {
-			core->emulateCycle(0);
+			if(!core->hlt)
+				core->emulateCycle();
 			
 			core->cycCount += core->cycles - core->cycBefore;
 			
 			if(core->cycles >= (CYCLES_EVERY_FRAME / 2)) {
 				if(core->interrupt) {
-					core->emulateCycle(vInterrupt = (vInterrupt == 0xcf) ? 0xd7 : 0xcf);					//cf or d7
-					core->interrupt = false;
+					core->opcode = (vInterrupt) ? 0xd7 : 0xcf;
+					core->rst();				
+					core->cycles += 4;
 				}
 				core->cycles -= (CYCLES_EVERY_FRAME / 2);
 			}
