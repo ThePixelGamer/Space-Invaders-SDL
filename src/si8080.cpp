@@ -12,15 +12,11 @@ string si8080::load(const char* filename) {
 	else {
 		fseek(rom, 0, SEEK_END);
 		romSize = ftell(rom);
-		vramStart = romSize + 0x400;
-		sp = vramStart;	
 		rewind(rom);
 		
 		char* buffer = (char*)malloc(sizeof(char) * romSize);
 		if (buffer == NULL) {
-			fputs("Memory error", stderr); 
-			vramStart = 0x2400;
-			sp = 0x2400;
+			fputs("Memory error", stderr);
 		}
 		else {
 			uint16_t result = fread(buffer, 1, romSize, rom);
@@ -28,11 +24,38 @@ string si8080::load(const char* filename) {
 				fputs("Reading error", stderr); 
 			}
 			else {
-				for(int i = 0; i < romsize; i++)
-					memory[i] = rom[i];
+				if(cmp) {
+					pc = 0x100;
+					for(int i = 0; i < pc; i++)
+						memory.push_back(0);
 
-				for(int i = romSize; i < 0x8000; i++)
-					memory[i] = 0;	
+					memory[0x00] = 0x08; //warm boot
+					memory[0x05] = 0x10; //cpm call
+					uint16_t tmp = pc + romSize + 0x400;
+					memory[0x06] = tmp & 0xff;
+					memory[0x07] = (tmp >> 8) & 0xff;
+					//memory[0x06] = 0x18; //"contains the value of FBASE and can be used to determine the size of available memory, assuming that the CCP is being overlaid by a transient program"
+				}
+				else
+					pc = 0x0;
+
+				for(int i = pc; i < (pc + romSize); i++)
+					memory.push_back(buffer[i-pc]);
+
+				for(int i = (pc + romSize); i < (pc + romSize + 0x2000); i++)
+					memory.push_back(0);	
+
+				vramStart = pc + romSize + 0x400;
+				sp = vramStart;
+				
+				cycles = 0;
+				cycCount = 0;
+				cycBefore = 0;
+
+				interrupt = false;
+				hlt = false;
+				drawFlag = true;
+				debug = true;
 
 				fclose(rom);
 				free(buffer);
@@ -70,36 +93,33 @@ string si8080::load(const char* filename) {
 		}
 	}
 
-
 	for(int i = 0; i < 8; i++)
-		registers[i] = 0;	
+		registers[i] = 0;
 
-	romSize = 0x2000;
-	vramStart = 0x2400;
-	pc = 0x0;	
-	sp = vramStart;	
-	
-	cycles = 0;
-	cycCount = 0;
-	cycBefore = 0;
-
-	drawFlag = true;
-	interrupt = false;
-
-	debug = true;
+	return "Loaded: " + (string)filename + "\nSize: " + to_string(romSize) + "\n";
 }
 
-void si8080::emulateCycle() {	
-	uint8_t opcode = memory[pc];
+void si8080::emulateCycle(bool external) {		
+	if(!external)
+		opcode = memory[pc];
 
 	cycBefore = cycles;
 	
 	loc = ((uint16_t) registers[H] << 8) + registers[L];
 
+	if(debug)
+		cout << "PC: " << hex << setw(4) << +pc;
+	
 	switch((opcode >> 6) & 0x03) { //xx000000
 		case 0x00: {
 			switch(opcode & 0x07) { //00000xxx
-				case 0x00: break;
+				case 0x00: {
+					switch((opcode >> 3) & 0x03) {
+						case 0x00: break;
+						case 0x01: break;
+						case 0x02: cpm(registers[0x01]); break;
+					}
+				} break;
 				case 0x01: {
 					switch((opcode >> 3) & 0x01) { //00rpx001
 						case 0x00: lxi(); break;
@@ -210,17 +230,29 @@ void si8080::emulateCycle() {
 					switch((opcode >> 4) & 0x03) {
 						case 0x00: jmp(); break;
 						case 0x01: //OUT D8
-							port[memory[pc+1]] = registers[A];
+							port[memory[pc+1]+2] = registers[A];
 							pc += 1;
-							
 							cycles += 6;
+							break;
+						case 0x02: //XTHL
+						{
+							uint16_t tmp3 = loc;
+							uint8_t tmp2 = memory[sp];
+							uint8_t tmp1 = memory[sp+1];
+							loc = sp;
+							changeM((tmp3 >> 4) & 0x0f);
+							loc++;
+							changeM(tmp3 & 0x0f);
+							registers[L] = tmp2;
+							registers[H] = tmp1;
+						}
 							break;
 						case 0x03: //DI
 							interrupt = false;
 							break;
 					}	
 				} break;
-				case 0x04: case 0x0d: callC(); break;
+				case 0x04: case 0x0c: callC(); break;
 				case 0x05: push(); break;
 				case 0x06: case 0x0e: math(); break;
 				case 0x07: case 0x0f: rst(); break;
@@ -237,6 +269,11 @@ void si8080::emulateCycle() {
 				} break;
 				case 0x0b: {
 					switch((opcode >> 4) & 0x03) {
+						case 0x01: //IN D8
+							registers[A] = port[memory[pc+1]];
+							pc += 1;
+							cycles += 6;
+							break;
 						case 0x02: //XCHG 
 						{
 							uint8_t tmp2 = registers[0x03];
@@ -252,15 +289,14 @@ void si8080::emulateCycle() {
 							break;
 					}	
 				} break;
-				case 0x0c: call(); break;
+				case 0x0d: call(); break;
 			}
 		} break;
 	}
 
 	if(debug) {
-		cout << "PC: " << hex << setw(4) << +pc << "\tSP: " << setw(4) << +sp << "\tA: " << +registers[A] << "\tB: " << +registers[0x00] << "\tC: " << +registers[0x01] << "\tD: " << +registers[0x02] << "\tE: " << +registers[0x03] << "\tH: " << +registers[H] << "\tL: " << +registers[L] << "\n";
-		cout << "Opcode: " << hex << +opcode << "\tM" << +loc << dec << "\tCy: " << +cy << "\tAC: " << +ac << "\tS: " << +s << "\tZ: " << +z << "\tP: " << +p << "\n";
-		cout << "\n";
+		cout << "\tSP: " << setw(4) << +sp << "\tA: " << +registers[A] << "\tB: " << +registers[0x00] << "\tC: " << +registers[0x01] << "\tD: " << +registers[0x02] << "\tE: " << +registers[0x03] << "\tH: " << +registers[H] << "\tL: " << +registers[L] << "\n";
+		cout << "OP: " << hex << setw(4) << +opcode << "\tM: " << setw(4) << +loc << "\t\tCy: " << dec << +cy << "\tAC: " << +ac << "\tS: " << +s << "\tZ: " << +z << "\tP: " << +p << "\t20c0: " << +memory[0x20c0] << "\n\n";
 	}
 
 	pc++;
@@ -315,9 +351,7 @@ else {
 } my implementation of the ac bit*/
 
 void si8080::changeM(uint8_t value) { //it's right now :D
-	if(loc > vramStart && loc < vramStart + 0x1C00) {
-		//cout << hex << +value << endl;
-
+	if(loc >= vramStart && loc < vramStart + 0x1C00) {
 		int offset = (loc - vramStart) * 8; 
 		int x = offset / 256;
 		int y = 255 - (offset % 256);
@@ -429,11 +463,11 @@ void si8080::dcx() {
 void si8080::inr() {
 	uint8_t reg = (opcode >> 3) & 0x07;
 	if(reg == 0x06) {
-		changeM(setCond8(memory[loc] + 1, memory[loc], 1, 0x4));
+		changeM(setCond(memory[loc] + 1, memory[loc], 1, 0x4));
 		cycles += 5;
 	} 
 	else
-		registers[reg] = setCond8(registers[reg] + 1, registers[reg], 1, 0x4);
+		registers[reg] = setCond(registers[reg] + 1, registers[reg], 1, 0x4);
 
 	cycles += 1;
 } 
@@ -441,12 +475,11 @@ void si8080::inr() {
 void si8080::dcr() {
 	uint8_t reg = (opcode >> 3) & 0x07;
 	if(reg == 0x06) {
-		loc = (registers[reg] << 8) + registers[reg+1];
-		changeM(setCond8(memory[loc] - 1, memory[loc], 1, 0x4));
+		changeM(setCond(memory[loc] - 1, memory[loc], 1, 0x4));
 		cycles += 5;
 	} 
 	else
-		registers[reg] = setCond8(registers[reg] - 1, registers[reg], 1, 0x4);
+		registers[reg] = setCond(registers[reg] - 1, registers[reg], 1, 0x4);
 
 	cycles += 1;
 } 
@@ -497,14 +530,14 @@ void si8080::math() {
 	}
 
 	switch((opcode >> 3) & 0x07) {
-		case 0x00: registers[A] = setCond8(registers[A] + data, registers[A], data, 0x4); break;
-		case 0x01: registers[A] = setCond8(registers[A] + (data + cy), registers[A], (data + cy), 0x4); break;
-		case 0x02: registers[A] = setCond8(registers[A] - data, registers[A], data, 0x4); break;
-		case 0x03: registers[A] = setCond8(registers[A] - (data - cy), registers[A], (data + cy), 0x4); break;
-		case 0x04: registers[A] = setCond8(registers[A] & data, 0, 0, 0x2); break;
-		case 0x05: registers[A] = setCond8(registers[A] ^ data, 0, 0, 0x2); break;
-		case 0x06: registers[A] = setCond8(registers[A] | data, 0, 0, 0x2); break;
-		case 0x07: setCond8(registers[A] - data, registers[A], data, 0x4); break;
+		case 0x00: registers[A] = setCond(registers[A] + data, registers[A], data, 0x4); break;
+		case 0x01: registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy), 0x4); break;
+		case 0x02: registers[A] = setCond(registers[A] - data, registers[A], data, 0x4); break;
+		case 0x03: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy), 0x4); break;
+		case 0x04: registers[A] = setCond(registers[A] & data, 0, 0, 0x2); break;
+		case 0x05: registers[A] = setCond(registers[A] ^ data, 0, 0, 0x2); break;
+		case 0x06: registers[A] = setCond(registers[A] | data, 0, 0, 0x2); break;
+		case 0x07: setCond(registers[A] - data, registers[A], data, 0x4); break;
 	}
 }
 
@@ -585,16 +618,14 @@ void si8080::rst() { //11 exp(3) 111
 }
 
 void si8080::jmp() {
-	pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+	pc = (memory[pc+2] << 8) + memory[pc+1] - 1;
 	cycles += 6;
 }
 
 void si8080::ret() {
-	memory[sp-2] = pc & 0xff;
-	memory[sp-1] = (pc & 0xff00) >> 8;
-	sp -= 2;
-
-	pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+	cout << hex << +memory[sp+1] << +memory[sp] << endl;
+	pc = (memory[sp+1] << 8) + memory[sp] + 2;
+	sp += 2;
 	cycles += 6;
 }
 
@@ -603,6 +634,18 @@ void si8080::call() {
 	memory[sp-1] = (pc & 0xff00) >> 8;
 	sp -= 2;
 
-	pc = ((uint16_t) memory[pc+2] << 8) + memory[pc+1] - 1;
+	pc = (memory[pc+2] << 8) + memory[pc+1] - 1;
 	cycles += 13;
+}
+
+void si8080::cpm(uint8_t c) {
+	if(c == 9) {
+		for(uint16_t location = (registers[0x02] << 8) + registers[0x03]; memory[location] != 0x24; location++) {
+			cout << memory[location];
+		}
+
+		cout << "$" << endl;
+	}
+
+	ret();
 }

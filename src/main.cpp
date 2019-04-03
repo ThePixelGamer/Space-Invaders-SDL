@@ -20,12 +20,12 @@ bool vInterrupt = 1;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
-	
 	if(argc > 1) {
-		cout << "Loaded: " << core->load(args[1]) << "\t" << "\n";
+		core->cmp = true;
+		cout << core->load(args[1]);
 	}
 	else {
-		cout << "Loaded: " << core->load("invaders.com") << "\t" << "\n";
+		cout << core->load("invaders.COM");
 	}
 
 	SDL_Renderer*				renderer;
@@ -72,14 +72,14 @@ int main(int argc, char* args[]) {
 		
 		while(core->cycCount <= CYCLES_EVERY_FRAME) {
 			if(!core->hlt)
-				core->emulateCycle();
+				core->emulateCycle(false);
 			
 			core->cycCount += core->cycles - core->cycBefore;
 			
 			if(core->cycles >= (CYCLES_EVERY_FRAME / 2)) {
 				if(core->interrupt) {
 					core->opcode = (vInterrupt) ? 0xd7 : 0xcf;
-					core->rst();				
+					core->emulateCycle(true);		
 					core->cycles += 4;
 				}
 				core->cycles -= (CYCLES_EVERY_FRAME / 2);

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <bitset>
+#include <vector>
 
 #include "SDL2/SDL.h"
 
@@ -15,8 +16,8 @@ class si8080 {
     uint8_t         registers[8];          //b, c, d, e, h, l, not using, a
     uint8_t         cy, ac, s, z, p;       //conditions
 
-	uint16_t        pc, sp, loc;        //counter + stack pointer
-	uint8_t         memory[0x4000];        //4kb
+	uint16_t        pc, sp, loc;           //counter + stack pointer
+	vector<uint8_t> memory;        //4kb
     long            romSize;
     int             vramStart;
 
@@ -25,10 +26,10 @@ public:
     uint8_t			port[9];     //read 0, read 1, read 2, read 3, write 2, write 3, write 4, write 5, write 6
 	
     int       		cycles, cycBefore, cycCount;
-    bool            interrupt, hlt, drawFlag, debug;
-    uint16_t        opcode;
+    bool            interrupt, hlt, drawFlag, debug, cmp;
+    uint8_t         opcode;
 
-	void            emulateCycle();
+	void            emulateCycle(bool);
 	bool            checkCond();
 	uint8_t         setCond(uint16_t, uint8_t, uint8_t, uint8_t);
 	uint8_t         checkParity(uint8_t);
@@ -58,5 +59,7 @@ public:
     void            rst(); 
     void            jmp();  
     void            ret();
-    void            call();        
+    void            call();     
+
+    void            cpm(uint8_t);  
 };  
