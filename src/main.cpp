@@ -79,6 +79,7 @@ int main(int argc, char* args[]) {
 			if(core->cycles >= (CYCLES_EVERY_FRAME / 2)) {
 				if(core->interrupt) {
 					core->opcode = (vInterrupt) ? 0xd7 : 0xcf;
+					vInterrupt = !vInterrupt;
 					core->emulateCycle(true);		
 					core->cycles += 4;
 				}
