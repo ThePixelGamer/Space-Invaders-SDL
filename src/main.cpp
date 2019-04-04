@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <algorithm>
 #include <iostream>
+#include <chrono>
 
 #include "si8080.h"
 
@@ -11,6 +12,7 @@
 #define SCREEN_WIDTH 224
 
 #define CYCLES_EVERY_FRAME 2000000 / 60
+#define CYCLES_EVERY_HALFFRAME CYCLES_EVERY_FRAME / 2
 
 SDL_Window*		window;
 const Uint8*	state;
@@ -20,6 +22,7 @@ bool vInterrupt = 1;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
+    auto start = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now());
 	if(argc > 1) {
 		core->cmp = true;
 		cout << core->load(args[1]);
@@ -38,9 +41,11 @@ int main(int argc, char* args[]) {
 	SDL_GetCurrentDisplayMode(0, &DM);
 
 	window = SDL_CreateWindow("Space Invaders", (DM.w/2)-(SCREEN_WIDTH/2), (DM.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALWAYS_ON_TOP);
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED /*| SDL_RENDERER_PRESENTVSYNC*/);
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-
+	
+	uint32_t timer = SDL_GetTicks();
+	cout << timer << endl;
 	while(run) {
 		//Handle Updates
 		while(SDL_PollEvent(&event)) {
@@ -68,32 +73,36 @@ int main(int argc, char* args[]) {
 			}
 		}
 		
-		core->cycCount = 0;
-		
-		while(core->cycCount <= CYCLES_EVERY_FRAME) {
-			if(!core->hlt)
-				core->emulateCycle(false);
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
+		if(elapsed.count() > 1/60) {
+			cout << elapsed.count() << endl;
+			start = elapsed;
+			uint32_t cycCount = 0;
 			
-			core->cycCount += core->cycles - core->cycBefore;
-			
-			if(core->cycles >= (CYCLES_EVERY_FRAME / 2)) {
-				if(core->interrupt) {
-					core->opcode = (vInterrupt) ? 0xd7 : 0xcf;
-					vInterrupt = !vInterrupt;
-					core->emulateCycle(true);		
-					core->cycles += 4;
+			while(cycCount <= CYCLES_EVERY_FRAME) {
+				core->cycBefore = core->cycles;
+				
+				if(!core->hlt)
+					core->emulateCycle();
+				
+				cycCount += core->cycles - core->cycBefore;
+				
+				if(core->cycles >= (CYCLES_EVERY_FRAME / 2)) {
+					if(core->interrupt) {
+						core->opcode = (vInterrupt) ? 0xd7 : 0xcf;
+						vInterrupt = !vInterrupt;
+						core->rst();		
+						core->cycles += 4;
+					}
+					core->cycles -= (CYCLES_EVERY_FRAME / 2);
 				}
-				core->cycles -= (CYCLES_EVERY_FRAME / 2);
 			}
-		}
 		
-		if(core->drawFlag) {
 			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint32_t));
 			
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
-			core->drawFlag = false;
 		}
 	}
 

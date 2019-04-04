@@ -86,7 +86,6 @@ string si8080::load(const char* filename) {
 				sp = vramStart;
 				
 				cycles = 0;
-				cycCount = 0;
 				cycBefore = 0;
 
 				interrupt = false;
@@ -103,12 +102,8 @@ string si8080::load(const char* filename) {
 	return "Loaded: " + (string)filename + "\nSize: " + to_string(romSize) + "\n";
 }
 
-void si8080::emulateCycle(bool external) {
-	if(!external)
-		opcode = memory[pc];
-
-	cycBefore = cycles;
-	
+void si8080::emulateCycle() {
+	opcode = memory[pc];
 	loc = ((uint16_t) registers[H] << 8) + registers[L];
 
 	if(debug)
@@ -139,10 +134,6 @@ void si8080::emulateCycle(bool external) {
 							changeM(registers[L]);
 							loc += 1;
 							changeM(registers[H]);
-
-							cout << loc << endl;
-							cout << hex << +memory[loc] << " " << +memory[loc-1] << endl;
-
 							pc += 2;
 							cycles += 12;
 							break;
@@ -575,13 +566,6 @@ void si8080::pop() { //11 rp(2) 0001
 
 	sp += 2;
 	cycles += 6;
-
-	// cout << "POP from " << hex << +sp << ": ";
-	// for(int i = sp; i < vramStart; i++) {
-	// 	cout << "|" << hex << +memory[i];
-	// }
-
-	// cout << endl;
 }
 
 void si8080::jmpC() { //11 cond(3) 010
@@ -617,13 +601,6 @@ void si8080::push() { //11 rp(2) 0101
 
 	sp -= 2;
 	cycles += 7;
-
-	// cout << "PUSH: ";
-	// for(int i = sp; i < vramStart; i++) {
-	// 	cout << "|" << hex << +memory[i];
-	// }
-
-	// cout << endl;
 }
 
 void si8080::rst() { //11 exp(3) 111

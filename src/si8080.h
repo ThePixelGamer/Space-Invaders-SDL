@@ -25,11 +25,11 @@ public:
 	uint32_t*		pixels;      //duplicate of vram but in 32 rgba format
     uint8_t			port[9];     //read 0, read 1, read 2, read 3, write 2, write 3, write 4, write 5, write 6
 	
-    int       		cycles, cycBefore, cycCount;
+    int       		cycles, cycBefore;
     bool            interrupt, hlt, drawFlag, debug, cmp;
     uint8_t         opcode;
 
-	void            emulateCycle(bool);
+	void            emulateCycle();
 	bool            checkCond();
 	uint8_t         setCond(uint16_t, uint8_t, uint8_t, uint8_t);
 	uint8_t         checkParity(uint8_t);
