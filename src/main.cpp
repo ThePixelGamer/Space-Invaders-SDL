@@ -5,14 +5,18 @@
 #include <algorithm>
 #include <iostream>
 #include <chrono>
+#include <cstdint>
 
 #include "si8080.h"
+
+using namespace chrono; 
+using frame = duration<int32_t, ratio<1, 60>>; 
+using ms = duration<float, milli>; 
 
 #define SCREEN_HEIGHT 256
 #define SCREEN_WIDTH 224
 
-#define CYCLES_EVERY_FRAME 2000000 / 60
-#define CYCLES_EVERY_HALFFRAME CYCLES_EVERY_FRAME / 2
+#define CLOCK 2000000
 
 SDL_Window*		window;
 const Uint8*	state;
@@ -22,13 +26,13 @@ bool vInterrupt = 1;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
-    auto start = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now());
-	if(argc > 1) {
+	time_point<steady_clock> fpsTimer(steady_clock::now());
+    if(argc > 1) {
 		core->cmp = true;
-		cout << core->load(args[1]);
+		core->load(args[1]);
 	}
 	else {
-		cout << core->load("invaders.COM");
+		core->load("invaders.COM");
 	}
 
 	SDL_Renderer*				renderer;
@@ -40,20 +44,15 @@ int main(int argc, char* args[]) {
 	SDL_DisplayMode DM;
 	SDL_GetCurrentDisplayMode(0, &DM);
 
-	window = SDL_CreateWindow("Space Invaders", (DM.w/2)-(SCREEN_WIDTH/2), (DM.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALWAYS_ON_TOP);
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	window = SDL_CreateWindow("Space Invaders", (DM.w/2)-(SCREEN_WIDTH/2), (DM.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH*2, SCREEN_HEIGHT*2, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALWAYS_ON_TOP);
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 	
-	uint32_t timer = SDL_GetTicks();
-	cout << timer << endl;
+    frame FPS{};
 	while(run) {
 		//Handle Updates
 		while(SDL_PollEvent(&event)) {
 			switch(event.type) {
-				case SDL_QUIT:
-					exit(0);
-					break;
-					
 			  	case SDL_KEYDOWN:
 					state = SDL_GetKeyboardState(NULL);
 					keyboard(true);
@@ -63,23 +62,16 @@ int main(int argc, char* args[]) {
 					state = SDL_GetKeyboardState(NULL);
 					keyboard(false);
 					break;
-			
-				case SDL_WINDOWEVENT:
-					core->drawFlag = true;
-					break;
-
-			  	default:
-					break;
 			}
 		}
 		
-		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
-		if(elapsed.count() > 1/60) {
-			cout << elapsed.count() << endl;
-			start = elapsed;
+		FPS = duration_cast<frame>(steady_clock::now() - fpsTimer);
+		if(FPS.count() >= 1) {
+			fpsTimer = steady_clock::now();
+			SDL_SetWindowTitle(window, ("fps:" + to_string(60/FPS.count()) + " dt:" + to_string(duration_cast<ms>(FPS).count()) + " Invaders").c_str());
+
 			uint32_t cycCount = 0;
-			
-			while(cycCount <= CYCLES_EVERY_FRAME) {
+			while(cycCount <= CLOCK / 60) {
 				core->cycBefore = core->cycles;
 				
 				if(!core->hlt)
@@ -87,24 +79,25 @@ int main(int argc, char* args[]) {
 				
 				cycCount += core->cycles - core->cycBefore;
 				
-				if(core->cycles >= (CYCLES_EVERY_FRAME / 2)) {
+				if(core->cycles >= (CLOCK / 120)) {
 					if(core->interrupt) {
 						core->opcode = (vInterrupt) ? 0xd7 : 0xcf;
 						vInterrupt = !vInterrupt;
 						core->rst();		
 						core->cycles += 4;
 					}
-					core->cycles -= (CYCLES_EVERY_FRAME / 2);
+					core->cycles -= (CLOCK / 120);
 				}
 			}
 		
 			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint32_t));
-			
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
 		}
 	}
+
+	fclose(core->log); 
 
 	SDL_DestroyTexture(texture);
 	SDL_DestroyRenderer(renderer);

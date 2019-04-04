@@ -8,7 +8,8 @@
 #define H 0x4
 #define L 0x5
 
-string si8080::load(const char* filename) {
+
+void si8080::load(const char* filename) {
 	pixels = new uint32_t[224 * 256]; //vram is 224*32 bytes, each bit is a pixel
 
 	for(int x = 0; x < 224; x++) { 
@@ -91,7 +92,7 @@ string si8080::load(const char* filename) {
 				interrupt = false;
 				hlt = false;
 				drawFlag = true;
-				debug = false;
+				debug = true;
 
 				fclose(rom);
 				free(buffer);
@@ -99,206 +100,121 @@ string si8080::load(const char* filename) {
 		}
 	}
 
-	return "Loaded: " + (string)filename + "\nSize: " + to_string(romSize) + "\n";
+	log = fopen("log.txt", "w");
+	fprintf(log, "Loaded: %s\nSize: %li\n", filename, romSize);
 }
 
 void si8080::emulateCycle() {
 	opcode = memory[pc];
 	loc = ((uint16_t) registers[H] << 8) + registers[L];
 
+	cycles += 4;
+
 	if(debug)
-		cout << "PC: " << hex << setw(4) << +pc;
+		fprintf(log, "PC: %4X", pc);
 	
-	switch((opcode >> 6) & 0x3) { //xx000000
-		case 0x0: {
-			switch(opcode & 0x7) { //00000xxx
-				case 0x0: {
-					switch((opcode >> 3) & 0x3) {
-						case 0x0: break; //nop
-						case 0x1: break; //warm boot
-						case 0x2: cpm(registers[C]); break; //cpm 5
-					}
-				} break;
-				case 0x1: {
-					switch((opcode >> 3) & 0x1) { //00rpx001
-						case 0x0: lxi(); break;
-						case 0x1: dad(); break;
-					}
-				} break;
-				case 0x2: {
-					switch((opcode >> 3) & 0x7) { //00xrx010
-						case 0x0: case 0x2: stax(); break;
-						case 0x1: case 0x3: ldax(); break;
-						case 0x4: //SHLD adr
-							loc = (memory[pc+2] << 8) + memory[pc+1];
-							changeM(registers[L]);
-							loc += 1;
-							changeM(registers[H]);
-							pc += 2;
-							cycles += 12;
-							break;
-						case 0x5: //LHLD adr
-							loc = (memory[pc+2] << 8) + memory[pc+1];
-							registers[L] = memory[loc];
-							registers[H] = memory[loc+1];
+	switch(opcode) {
+	//0x00-0x3f
+		case 0x0:															break; 
+					case 0x10:							cpm();				break; //cpm 5
+		case 0x1:	case 0x11:	case 0x21:	case 0x31:	lxi();				break;
+		case 0x2:	case 0x12:							stax(); 			break; 
+								case 0x22:				shld();				break;
+											case 0x32:	sta();				break;
+		case 0x3:	case 0x13:	case 0x23:	case 0x33:	inx();				break;
+		case 0x4:	case 0x14:	case 0x24:	case 0x34:	inr();				break; //0xc same thing
+		case 0x5:	case 0x15:	case 0x25:	case 0x35:	dcr();				break;
+		case 0x6:	case 0x16:	case 0x26:	case 0x36:	mvi();				break;
+		case 0x7:										rlc();				break;
+					case 0x17:							ral();				break;
+								case 0x27:				daa();				break;
+											case 0x37:	stc();				break;
+		case 0x8: 															break; //warm boot
+		case 0x9:	case 0x19:	case 0x29:	case 0x39: 	dad();				break;
+		case 0xa:	case 0x1a:							ldax(); 			break;
+								case 0x2a:				lhld();				break;
+											case 0x3a:	lda();				break;
+		case 0xb:	case 0x1b:	case 0x2b:	case 0x3b:	dcx();				break;
+		case 0xc:	case 0x1c:	case 0x2c:	case 0x3c:	inr();				break;
+		case 0xd:	case 0x1d:	case 0x2d:	case 0x3d:	dcr();				break;
+		case 0xe:	case 0x1e:	case 0x2e:	case 0x3e:	mvi();				break;
+		case 0xf:										rrc();				break;
+					case 0x1f:							rar();				break;
+								case 0x2f:				cma();				break;
+											case 0x3f:	cmc();				break;
+		
+	//0x40-0x7f
+		case 0x40:	case 0x50:	case 0x60:	case 0x70:
+		case 0x41:	case 0x51:	case 0x61:	case 0x71:
+		case 0x42:	case 0x52:	case 0x62:	case 0x72:
+		case 0x43:	case 0x53:	case 0x63:	case 0x73:
+		case 0x44:	case 0x54:	case 0x64:	case 0x74:
+		case 0x45:	case 0x55:	case 0x65:	case 0x75:
+		case 0x46:	case 0x56:	case 0x66:
+		case 0x47:	case 0x57:	case 0x67:	case 0x77:
+		case 0x48:	case 0x58:	case 0x68:	case 0x78:
+		case 0x49:	case 0x59:	case 0x69:	case 0x79:
+		case 0x4a:	case 0x5a:	case 0x6a:	case 0x7a:
+		case 0x4b:	case 0x5b:	case 0x6b:	case 0x7b:
+		case 0x4c:	case 0x5c:	case 0x6c:	case 0x7c:
+		case 0x4d:	case 0x5d:	case 0x6d:	case 0x7d:
+		case 0x4e:	case 0x5e:	case 0x6e:	case 0x7e:
+		case 0x4f:	case 0x5f:	case 0x6f:	case 0x7f:	mov();				break;
+											case 0x76: 	hlt = true;			break;
 
-							pc += 2;
-							cycles += 12;
-							break;
-						case 0x6: //STA adr
-							loc = ((memory[pc+2] << 8) + memory[pc+1]);
-							changeM(registers[A]);
+	//0x80-0xbf
+		case 0x80:	case 0x90:	case 0xa0:	case 0xb0:
+		case 0x81:	case 0x91:	case 0xa1:	case 0xb1:
+		case 0x82:	case 0x92:	case 0xa2:	case 0xb2:
+		case 0x83:	case 0x93:	case 0xa3:	case 0xb3:
+		case 0x84:	case 0x94:	case 0xa4:	case 0xb4:
+		case 0x85:	case 0x95:	case 0xa5:	case 0xb5:
+		case 0x86:	case 0x96:	case 0xa6:	case 0xb6:
+		case 0x87:	case 0x97:	case 0xa7:	case 0xb7:
+		case 0x88:	case 0x98:	case 0xa8:	case 0xb8:
+		case 0x89:	case 0x99:	case 0xa9:	case 0xb9:
+		case 0x8a:	case 0x9a:	case 0xaa:	case 0xba:
+		case 0x8b:	case 0x9b:	case 0xab:	case 0xbb:
+		case 0x8c:	case 0x9c:	case 0xac:	case 0xbc:
+		case 0x8d:	case 0x9d:	case 0xad:	case 0xbd:
+		case 0x8e:	case 0x9e:	case 0xae:	case 0xbe:
+		case 0x8f:	case 0x9f:	case 0xaf:	case 0xbf:	math();				break;
 
-							pc += 2;
-							cycles += 9;
-							break;
-						case 0x7: //LDA adr
-							registers[A] = memory[(memory[pc+2] << 8) + memory[pc+1]];
-							
-							pc += 2;
-							cycles += 9;
-							break;
-					}
-				} break;
-				case 0x3: {
-					switch((opcode >> 3) & 0x1) { //00rpx011
-						case 0x0: inx(); break;
-						case 0x1: dcx(); break;
-					}
-				} break;
-				case 0x4: inr(); break;
-				case 0x5: dcr(); break;
-				case 0x6: mvi(); break;
-				case 0x7: {
-					switch((opcode >> 3) & 0x7) { //00xxx111
-						case 0x0: //RLC
-							if((registers[A] & 0x80) == 0x80) {
-								cy = 1;
-								registers[A] = (registers[A] << 1) + 0x1; 
-							}
-							else {
-								cy = 0;
-								registers[A] = (registers[A] << 1);
-							}
-							break;
-						case 0x1: //RRC
-							if((registers[A] & 0x1) == 0x1) {
-								cy = 1;
-								registers[A] = (registers[A] >> 1) + 0x80; 
-							}
-							else {
-								cy = 0;
-								registers[A] = (registers[A] >> 1);
-							}
-							break;
-						case 0x2: //RAL
-							break;
-						case 0x3: //RAR
-							break;
-						case 0x4: //DAA
-							break;
-						case 0x5: //CMA
-							break;
-						case 0x6: //STC
-							break;
-						case 0x7: //CMC
-							break;
-					}
-				} break;
-			}
-		} break;
+	//0xc0-0xff
+		case 0xc0:	case 0xd0:	case 0xe0:	case 0xf0:	retC();				break;
+		case 0xc1:	case 0xd1:	case 0xe1:	case 0xf1:	pop();				break;
+		case 0xc2:	case 0xd2:	case 0xe2:	case 0xf2:	jmpC();				break;
+		case 0xc3:										jmp();				break;
+					case 0xd3:							out();				break;
+								case 0xe3:				xthl();				break;
+											case 0xf3:	interrupt = false;	break;
+		case 0xc4:	case 0xd4:	case 0xe4:	case 0xf4:	callC();			break;
+		case 0xc5:	case 0xd5:	case 0xe5:	case 0xf5:	push();				break;
+		case 0xc6:	case 0xd6:	case 0xe6:	case 0xf6:	math();				break;
+		case 0xc7:	case 0xd7:	case 0xe7:	case 0xf7:	rst();				break;
+		case 0xc8:	case 0xd8:	case 0xe8:	case 0xf8:	retC();				break;
+		case 0xc9:										ret();				break;
+								case 0xe9:				pc = loc - 1;		break;
+											case 0xf9:	sp = loc;			break;
+		case 0xca:	case 0xda:	case 0xea:	case 0xfa:	jmpC();				break;
+					case 0xdb:							in();				break;
+								case 0xeb:				xchg();				break;
+											case 0xfb:	interrupt = true;	break;
+		case 0xcc:	case 0xdc:	case 0xec:	case 0xfc:	callC();			break;
+		case 0xcd:										call();				break;
+		case 0xce:	case 0xde:	case 0xee:	case 0xfe:	math();				break;
+		case 0xcf:	case 0xdf:	case 0xef:	case 0xff:	rst();				break;
 
-		case 0x1: {
-			if(opcode == 0x76)
-				hlt = true;
-			else
-				mov();
-		} break;
-
-		case 0x2: {
-			math();
-		} break;
-
-		case 0x3: {
-			switch(opcode & 0xf) {
-				case 0x0: case 0x8: retC(); break;
-				case 0x1: pop(); break;
-				case 0x2: case 0xa: jmpC(); break;
-				case 0x3: {
-					switch((opcode >> 4) & 0x3) {
-						case 0x0: jmp(); break;
-						case 0x1: //OUT D8
-							port[memory[pc+1]+2] = registers[A];
-							pc += 1;
-							cycles += 6;
-							break;
-						case 0x2: //XTHL
-						{
-							uint16_t tmp3 = loc;
-							uint8_t tmp2 = memory[sp];
-							uint8_t tmp1 = memory[sp+1];
-							loc = sp;
-							changeM((tmp3 >> 8) & 0xf);
-							loc++;
-							changeM(tmp3 & 0xf);
-							registers[L] = tmp2;
-							registers[H] = tmp1;
-						}
-							break;
-						case 0x3: //DI
-							interrupt = false;
-							break;
-					}	
-				} break;
-				case 0x4: case 0xc: callC(); break;
-				case 0x5: push(); break;
-				case 0x6: case 0xe: math(); break;
-				case 0x7: case 0xf: rst(); break;
-				case 0x9: {
-					switch((opcode >> 4) & 0x3) {
-						case 0x0: ret(); break;
-						case 0x2: //PCHL
-							pc = loc - 1;
-							break;
-						case 0x3: //SPHL
-							sp = loc;
-							break;
-					}	
-				} break;
-				case 0xb: {
-					switch((opcode >> 4) & 0x3) {
-						case 0x1: //IN D8
-							registers[A] = port[memory[pc+1]];
-							pc += 1;
-							cycles += 6;
-							break;
-						case 0x2: //XCHG 
-						{
-							uint8_t tmp2 = registers[E];
-							uint8_t tmp1 = registers[D];
-							registers[E] = registers[L];
-							registers[D] = registers[H];
-							registers[L] = tmp2;
-							registers[H] = tmp1;
-						}
-							break;
-						case 0x3: //EI
-							interrupt = true;
-							break;
-					}	
-				} break;
-				case 0xd: call(); break;
-			}
-		} break;
+		default:
+			cout << hex << +opcode << endl;
 	}
 
 	if(debug) {
-		cout << "\tSP: " << setw(4) << +sp << "\tA: " << +registers[A] << "\tB: " << +registers[B] << "\tC: " << +registers[C] << "\tD: " << +registers[D] << "\tE: " << +registers[E] << "\tH: " << +registers[H] << "\tL: " << +registers[L] << "\n";
-		cout << "OP: " << hex << setw(4) << +opcode << "\tM: " << setw(4) << +loc << "\t\tCy: " << dec << +cy << "\tAC: " << +ac << "\tS: " << +s << "\tZ: " << +z << "\tP: " << +p << "\n\n";
-	}
+		fprintf(log, "\tSP: %4X\tA: %2X\tB: %2X\tC: %2X\tD: %2X\tE: %2X\tH: %2X\tL: %2X\n", sp, registers[A], registers[B], registers[C], registers[D], registers[E], registers[H], registers[L]);
+		fprintf(log, "OP: %4X\tM: %4X\t\tCy: %i\tAC: %i\tS: %i\tZ: %i\tP: %i\tCycles: %i\n\n", opcode, loc, cy, ac, s, z, p, cycles);
+	} 
 
 	pc++;
-	cycles += 4;
 }
 
 bool si8080::checkCond() {
@@ -342,10 +258,10 @@ uint8_t si8080::checkParity(uint8_t ans) {
 }
 
 /*if(ans >= old) {
-	return (~((old ^ diff) & 0x10) == (ans & 0x10));
+	return ((old ^ diff ^ ans) & 0x10) == 0x10;
 }
 else {
-	return ((old & 0x8) == 0 && (diff & 0x8) == 1);
+	return (~(old ^ diff ^ ans) & 0x10) == 0x10;
 } my implementation of the ac bit*/
 
 void si8080::changeM(uint8_t value) { //it's right now :D
@@ -396,36 +312,10 @@ void si8080::lxi() {
 	cycles += 6;
 } 
 
-void si8080::dad() {
-	uint8_t reg = (opcode >> 3) & 0x6;
-	uint32_t tmp = loc;
-
-	if(reg == 0x6) {
-		tmp += sp;
-	}
-	else {
-		tmp += (registers[reg] << 8) + registers[reg+1];
-	}
-
-	registers[L] = tmp & 0xff;
-	registers[H] = (tmp >> 8) & 0xff;
-	cy = (tmp > 0xffff);
-	cycles += 6;
-} 
-
 void si8080::stax() {
 	uint8_t reg = (opcode >> 3) & 0x2;
 	loc = (registers[reg] << 8) + registers[reg+1];
 	changeM(registers[A]);
-	
-	cycles += 3;
-}
-
-void si8080::ldax() {
-	uint8_t reg = (opcode >> 3) & 0x2;
-
-	loc = (registers[reg] << 8) + registers[reg+1];
-	registers[A] = memory[loc];
 	
 	cycles += 3;
 }
@@ -441,20 +331,6 @@ void si8080::inx() {
 		registers[reg] = (loc >> 8) & 0xff;
 	}
 	
-	cycles += 1;
-}
-
-void si8080::dcx() {
-	uint8_t reg = (opcode >> 3) & 0x6;
-	if(reg == 0x6) {
-		sp -= 1;
-	}
-	else {
-		loc = ((registers[reg] << 8) + registers[reg+1]) - 1;
-		registers[reg+1] = loc & 0xff;
-		registers[reg] = (loc >> 8) & 0xff;
-	}
-
 	cycles += 1;
 }
 				
@@ -494,6 +370,139 @@ void si8080::mvi() {
 	pc += 1;
 	cycles += 3;
 } 
+
+void si8080::rlc() {
+	if((registers[A] & 0x80) == 0x80) {
+		cy = 1;
+		registers[A] = (registers[A] << 1) + 0x1; 
+	}
+	else {
+		cy = 0;
+		registers[A] = (registers[A] << 1);
+	}
+}
+
+void si8080::dad() {
+	uint8_t reg = (opcode >> 3) & 0x6;
+	uint32_t tmp = loc;
+
+	if(reg == 0x6) {
+		tmp += sp;
+	}
+	else {
+		tmp += (registers[reg] << 8) + registers[reg+1];
+	}
+
+	registers[L] = tmp & 0xff;
+	registers[H] = (tmp >> 8) & 0xff;
+	cy = (tmp > 0xffff);
+	cycles += 6;
+} 
+
+void si8080::ldax() {
+	uint8_t reg = (opcode >> 3) & 0x2;
+
+	loc = (registers[reg] << 8) + registers[reg+1];
+	registers[A] = memory[loc];
+	
+	cycles += 3;
+}
+
+void si8080::dcx() {
+	uint8_t reg = (opcode >> 3) & 0x6;
+	if(reg == 0x6) {
+		sp -= 1;
+	}
+	else {
+		loc = ((registers[reg] << 8) + registers[reg+1]) - 1;
+		registers[reg+1] = loc & 0xff;
+		registers[reg] = (loc >> 8) & 0xff;
+	}
+
+	cycles += 1;
+}
+
+void si8080::rrc() {
+	if((registers[A] & 0x1) == 0x1) {
+		cy = 1;
+		registers[A] = (registers[A] >> 1) + 0x80; 
+	}
+	else {
+		cy = 0;
+		registers[A] = (registers[A] >> 1);
+	}
+}
+
+void si8080::ral() {
+	registers[A] = (registers[A] << 1) + cy; 
+
+	cy = (((registers[A] & 0x80) == 0x80) ? 1 : 0);
+}
+
+void si8080::rar() {
+	registers[A] = (registers[A] >> 1) + (cy << 7); 
+
+	cy = (((registers[A] & 0x1) == 0x1) ? 1 : 0);
+}
+
+void si8080::shld() {
+	loc = (memory[pc+2] << 8) + memory[pc+1];
+	changeM(registers[L]);
+	loc += 1;
+	changeM(registers[H]);
+	pc += 2;
+	cycles += 12;
+}
+
+void si8080::daa() {
+    uint8_t lsb = registers[A] & 0xf;
+    uint8_t msb = registers[A] >> 4;
+
+    if (ac || lsb > 9) {
+        setCond(registers[A] + 0x6, registers[A], 0x6, 0x4);
+    }
+    if (cy || msb > 9 || (msb >= 9 && lsb > 9)) {
+        setCond(registers[A] + 0x60, registers[A], 0x60, 0x4);
+        cy = 1;
+    }
+    p = checkParity(registers[A]);
+}
+
+void si8080::lhld() {
+	loc = (memory[pc+2] << 8) + memory[pc+1];
+	registers[L] = memory[loc];
+	registers[H] = memory[loc+1];
+
+	pc += 2;
+	cycles += 12;
+}
+
+void si8080::cma() {
+	registers[A] = !registers[A];
+}
+
+void si8080::sta() {
+	loc = ((memory[pc+2] << 8) + memory[pc+1]);
+	changeM(registers[A]);
+
+	pc += 2;
+	cycles += 9;
+}
+
+void si8080::stc() {
+	cy = 1;
+}
+
+void si8080::lda() {
+	registers[A] = memory[(memory[pc+2] << 8) + memory[pc+1]];
+	
+	pc += 2;
+	cycles += 9;
+}
+
+void si8080::cmc() {
+	cy = !cy;
+}
 
 void si8080::mov() {
 	uint8_t dst = (opcode >> 3) & 0x7;
@@ -635,17 +644,53 @@ void si8080::call() {
 	cycles += 13;
 }
 
-void si8080::cpm(uint8_t c) {
-	if(c == 2) {
-		printf("%c", memory[registers[E]]);
-	}
+void si8080::out() {
+	port[memory[pc+1]+2] = registers[A];
+	pc += 1;
+	cycles += 6;
+}
 
-	if(c == 9) {
-		for(uint16_t location = (registers[D] << 8) + registers[E]; memory[location] != 0x24; location++) {
-			printf("%c", memory[location]);
-		}
+void si8080::in() {
+	registers[A] = port[memory[pc+1]];
+	pc += 1;
+	cycles += 6;
+}
 
-		cout << "$";
+void si8080::xthl() {
+	uint16_t tmp3 = loc;
+	uint8_t tmp2 = memory[sp];
+	uint8_t tmp1 = memory[sp+1];
+	loc = sp;
+	changeM((tmp3 >> 8) & 0xf);
+	loc++;
+	changeM(tmp3 & 0xf);
+	registers[L] = tmp2;
+	registers[H] = tmp1;
+	cycles += 14;
+}
+
+void si8080::xchg() {
+	uint8_t tmp2 = registers[E];
+	uint8_t tmp1 = registers[D];
+	registers[E] = registers[L];
+	registers[D] = registers[H];
+	registers[L] = tmp2;
+	registers[H] = tmp1;
+}
+
+							
+
+void si8080::cpm() {
+	switch(registers[C]) {
+		case 0x2: printf("%c", memory[registers[E]]); break;
+
+		case 0x9: 
+			for(uint16_t location = (registers[D] << 8) + registers[E]; memory[location] != 0x24; location++) {
+				printf("%c", memory[location]);
+			}
+
+			cout << "$";
+			break;
 	}
 
 	ret();
