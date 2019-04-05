@@ -42,6 +42,9 @@ void si8080::load(const char* filename) {
 
 	for(int i = 0; i < 8; i++)
 		registers[i] = 0;
+	
+	for(int i = 0; i < 9; i++)
+		port[i] = 0;
 
 	FILE* rom = fopen(filename, "rb");
 	if (rom == NULL) {
