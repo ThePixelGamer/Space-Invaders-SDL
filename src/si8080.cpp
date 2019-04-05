@@ -533,9 +533,9 @@ void si8080::math() {
 		case 0x1: registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy), 0x4); break;
 		case 0x2: registers[A] = setCond(registers[A] - data, registers[A], data, 0x4); break;
 		case 0x3: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy), 0x4); break;
-		case 0x4: registers[A] = setCond(registers[A] & data, 0, 0, 0x2); break;
-		case 0x5: registers[A] = setCond(registers[A] ^ data, 0, 0, 0x2); break;
-		case 0x6: registers[A] = setCond(registers[A] | data, 0, 0, 0x2); break;
+		case 0x4: setCond(registers[A] &= data, 0, 0, 0x2); break;
+		case 0x5: setCond(registers[A] ^= data, 0, 0, 0x2); break;
+		case 0x6: setCond(registers[A] |= data, 0, 0, 0x2); break;
 		case 0x7: setCond(registers[A] - data, registers[A], data, 0x4); break;
 	}
 }
