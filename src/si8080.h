@@ -13,6 +13,7 @@
 using namespace std;
 
 class si8080 {
+public:
     uint8_t         registers[8];         //b, c, d, e, h, l, not using, a
     uint8_t         cy, ac, s, z, p;      //conditions
 
@@ -21,7 +22,6 @@ class si8080 {
     long            romSize;
     int             vramStart;
 
-public:
     FILE*           log;
 
 	uint32_t*		pixels;     //duplicate of vram but in 32 rgba format
