@@ -10,33 +10,41 @@
 
 
 void si8080::load(const char* filename) {
-	pixels = new uint32_t[224 * 256]; //vram is 224*32 bytes, each bit is a pixel
+	pixels = new uint8_t[224 * 256 * 3]; //vram is 224*32 bytes, each bit is a pixel
 
 	for(int x = 0; x < 224; x++) { 
 		for(int y = 0; y < 256; y++) { //2400, 2401.. bottom left to upper left then next row
-			if(y < 16) {
-				if(x < 16) {
-					pixels[((255 - y) * 224) + x] = 0xFFFFFFFF; //white 
-				}
-				else if(x < 118) {
-					pixels[((255 - y) * 224) + x] = 0x0FF00FF; //green
-				}
-				else if(x < 224) {
-					pixels[((255 - y) * 224) + x] = 0xFFFFFFFF; //white
-				}
-			}
-			else if(y < 72) {
-				pixels[((255 - y) * 224) + x] = 0x0FF00FF; //green
-			}
-			else if(y < 192) {
-				pixels[((255 - y) * 224) + x] = 0xFFFFFFFF; //white
-			}
-			else if(y < 224) {
-				pixels[((255 - y) * 224) + x] = 0xFF0000FF; //red
-			}
+			int pixel = ((y * 224) + x) * 3;
+
+            if(y < 32)
+                for(int rgb = 0; rgb < 3; rgb++) 
+                    pixels[pixel + rgb] = 0xFF; //white  
+            else if(y < 64) {
+                pixels[pixel] = 0xFF;     //r 100%
+                pixels[pixel+1] = 0x00; //g      0%
+                pixels[pixel+2] = 0x00; //b   0%
+            }
+            else if(y < 184)
+                for(int rgb = 0; rgb < 3; rgb++) 
+                    pixels[pixel + rgb] = 0xFF; //white 
+        	else if(y < 240) {
+                pixels[pixel] = 0x00;     //r   0%
+                pixels[pixel+1] = 0xFF; //g    100%
+                pixels[pixel+2] = 0x00; //b   0%
+            }
 			else if(y < 256) {
-				pixels[((255 - y) * 224) + x] = 0xFFFFFFFF; //white
-			}
+                if(x < 16) 
+                    for(int rgb = 0; rgb < 3; rgb++) 
+                        pixels[pixel + rgb] = 0xFF; //white 
+                else if(x < 118) {
+                    pixels[pixel] = 0x00;     //r   0%
+                    pixels[pixel+1] = 0xFF; //g    100%
+                    pixels[pixel+2] = 0x00; //b   0%
+                }
+                else if(x < 224) 
+                    for(int rgb = 0; rgb < 3; rgb++) 
+                        pixels[pixel + rgb] = 0xFF; //white 
+            }
 		}
 	}
 
@@ -275,23 +283,52 @@ void si8080::changeM(uint8_t value) { //it's right now :D
 		
 		for(int i = 0; i < 8; i++) {
 			bool bit = (((value >> i) & 0x1) == 0x1);
+			int location = ((y * 224) - (i * 224) + x) * 3;
 			
-			if(y > 240) {
-				if(x < 16) 
-					pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFFFFFFFF : 0x0; //white 
-				else if(x < 118) 
-					pixels[(y * 224) - (i * 224) + x] = (bit) ? 0x0FF00FF : 0x0; //green
-				else if(x < 224) 
-					pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFFFFFFFF : 0x0; //white
+			if(bit) {
+				if(y > 240) {
+					if(x < 16) {							//white 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0xFF;			//B
+					}	
+					else if(x < 118) {						//green 
+						pixels[location] = 0x0; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0x0;			//B
+					}	
+					else if(x < 224) {						//white 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0xFF;			//B
+					}
+				}
+				else if(y > 184) {							//green 
+						pixels[location] = 0x0; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0x0;			//B
+				}
+				else if(y > 64) {							//white 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0xFF;			//B
+				}
+				else if(y > 32) {							//red 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0x0;			//G
+						pixels[location+2] = 0x0;			//B
+				}
+				else if(y > 0) {							//white 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0xFF;			//B
+				}
 			}
-			else if(y > 184)
-				pixels[(y * 224) - (i * 224) + x] = (bit) ? 0x0FF00FF : 0x0; //green
-			else if(y > 64)
-				pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFFFFFFFF : 0x0;//white
-			else if(y > 32)
-				pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFF0000FF : 0x0; //red
-			else if(y > 0)
-				pixels[(y * 224) - (i * 224) + x] = (bit) ? 0xFFFFFFFF : 0x0; //white
+			else {
+				pixels[location] = 0x0;
+				pixels[location+1] = 0x0;
+				pixels[location+2] = 0x0;
+			}
 		}
 		
 		drawFlag = true;
