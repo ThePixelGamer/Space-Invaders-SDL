@@ -92,14 +92,18 @@ int main(int argc, char* args[]) {
 					vInterrupt = !vInterrupt;
 				}
 
-				if(core->opcode == 0xd3) {
-					if(core->loc == 6) {
-						y = x;
-						x = core->port[6];
-					}
-					else if(core->loc == 4) {
-						uint8_t shftamnt = (core->port[4] & 0x7); 
-						core->port[3] = (x << shftamnt) + y;
+				if(core->opcode == 0xd3) { //write
+					switch(core->loc) {
+						case 2:
+							core->port[2] = (x << (core->port[4] & 0x7)) + y; //prob something wrong
+							break;
+						case 4:
+							y = x;
+							x = core->port[5];
+							break;
+						default:
+							cout << +core->loc << endl;
+							break;
 					}
 				}
 			}

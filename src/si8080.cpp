@@ -53,16 +53,15 @@ void si8080::load(const char* filename) {
 
 	//each word is a bit starting from bit 7 (x = nothing, ? = not sure, 1 = always on)
 	//input 
-	port[0] = 0xe; //? right left fire 1 1 1 dip4
-	port[1] = 0x8; //x 1right 1left 1fire 1 1p 2p credit
-	port[2] = 0x0; //dip7 2right 2left 2fire dip6 tilt dip5 dip3
-	port[3] = 0x0; //shift register
+	port[0] = 0x8; //x 1right 1left 1fire 1 1p 2p credit
+	port[1] = 0x0; //dip7 2right 2left 2fire dip6 tilt dip5 dip3
+	port[2] = 0x0; //shift register
 	//output
-	port[4] = 0x0; //00000bbb shift amount
-	port[5] = 0x0; //x x amp extended sound_aliendeath sound_playerdeath sound_shot sound_ufo
-	port[6] = 0x0; //shift data
-	port[7] = 0x0; //x x x sound_ufodeath sound_fleet4 sound_fleet3 sound_fleet2 sound_fleet1
-	port[8] = 0x0; //watchdog
+	port[3] = 0x0; //00000bbb shift amount
+	port[4] = 0x0; //x x amp extended sound_aliendeath sound_playerdeath sound_shot sound_ufo
+	port[5] = 0x0; //shift data
+	port[6] = 0x0; //x x x sound_ufodeath sound_fleet4 sound_fleet3 sound_fleet2 sound_fleet1
+	port[7] = 0x0; //watchdog
 
 	FILE* rom = fopen(filename, "rb");
 	if (rom == NULL) {
@@ -689,14 +688,15 @@ void si8080::call() {
 }
 
 void si8080::out() {
-	loc = (memory[pc+1])+2;
-	port[loc] = registers[A];
+	loc = memory[pc+1];
+	port[loc + 1] = registers[A];
 	pc += 1;
 	cycles += 6;
 }
 
 void si8080::in() {
-	registers[A] = port[memory[pc+1]];
+	loc = memory[pc+1];
+	registers[A] = port[loc - 1];
 	pc += 1;
 	cycles += 6;
 }

@@ -25,7 +25,7 @@ public:
     FILE*           log;
 
 	uint8_t*		pixels;     //duplicate of vram but in 32 rgba format
-    uint8_t			port[9];    //read 0, read 1, read 2, read 3, write 2, write 3, write 4, write 5, write 6
+    uint8_t			port[8];    //read 1, read 2, read 3, write 2, write 3, write 4, write 5, write 6
 	
     int       		cycles, cycBefore;
     bool            interrupt, hlt, drawFlag, debug, cmp;
