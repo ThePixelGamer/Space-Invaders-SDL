@@ -128,28 +128,12 @@ void keyboard(bool press){
 		if(state[SDL_SCANCODE_R])
 			SDL_SetWindowSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-		// if(state[SDL_SCANCODE_1]) core->port[0] = (core->port[0] ^ 0x2) + 0x2; //READ1 bit1
-		// if(state[SDL_SCANCODE_2]) core->port[0] = (core->port[0] ^ 0x4) + 0x4; //READ1 bit2
-		// if(state[SDL_SCANCODE_SPACE]) core->port[0] = (core->port[0] ^ 0x10) + 0x10; //READ1 bit4
-		// if(state[SDL_SCANCODE_LEFT]) core->port[0] = (core->port[0] ^ 0x20) + 0x20; //READ1 bit5
-		// if(state[SDL_SCANCODE_RIGHT]) core->port[0] = (core->port[0] ^ 0x40) + 0x40; //READ1 bit6
-
-		// if(state[SDL_SCANCODE_LSHIFT]) core->port[1] = (core->port[1] ^ 0x4) + 0x4; //READ2 bit2
-		// if(state[SDL_SCANCODE_LALT]) core->port[1] = (core->port[1] ^ 0x10) + 0x10; //READ2 bit4
-		// if(state[SDL_SCANCODE_COMMA]) core->port[1] = (core->port[1] ^ 0x20) + 0x20; //READ2 bit5
-		// if(state[SDL_SCANCODE_PERIOD]) core->port[1] = (core->port[1] ^ 0x40) + 0x40; //READ2 bit6
+		if(state[SDL_SCANCODE_1]) core->port[1] = (core->port[1] ^ 0x4) + 0x4; //Player1 Start
+		if(state[SDL_SCANCODE_2]) core->port[1] = (core->port[1] ^ 0x2) + 0x2; //Player2 Start
 	}
 	else {
-		// if(state[SDL_SCANCODE_1]) core->port[0] ^= 0x2; //READ1 bit1
-		// if(state[SDL_SCANCODE_2]) core->port[0] ^= 0x4; //READ1 bit2
-		// if(state[SDL_SCANCODE_SPACE]) core->port[0] ^= 0x10; //READ1 bit4
-		// if(state[SDL_SCANCODE_LEFT]) core->port[0] ^= 0x20; //READ1 bit5
-		// if(state[SDL_SCANCODE_RIGHT]) core->port[0] ^= 0x40; //READ1 bit6
-
-		// if(state[SDL_SCANCODE_LSHIFT]) core->port[1] ^= 0x4; //READ2 bit2
-		// if(state[SDL_SCANCODE_LALT]) core->port[1] ^= 0x10; //READ2 bit4
-		// if(state[SDL_SCANCODE_COMMA]) core->port[1] ^= 0x20; //READ2 bit5
-		// if(state[SDL_SCANCODE_PERIOD]) core->port[1] ^= 0x40; //READ2 bit6
+		if(!state[SDL_SCANCODE_1]) core->port[1] ^= 0x4; //clear bit2 in port[1]
+		if(!state[SDL_SCANCODE_2]) core->port[1] ^= 0x2; //clear bit1 in port[1]
 	}
 }
 
