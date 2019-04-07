@@ -1,17 +1,14 @@
-de = 0x01d9
-                                	.8080
-  0000'                         	aseg
-                                	org	100h
+  0000                         	org	100h ; cpm and 8080 stuff
 
   0100    C3 0113               begin:	jmp	start 
   0103                          msbt:	ds	14
   0111                          spbt:	ds	2
-  0113    2A 0006               start:	lhld	6       ;
-  0116    F9                            sphl
-  0117    11 0E01                       lxi	d,msg1
-  011A    0E 09                         mvi	c,9
-  011C    CD 0DF5                       call	bdos
-  011F    21 013A                       lxi	h,tests		; hl = 0x013a
+  0113    2A 0006               start:lhld	6       
+  0116    F9                          sphl
+  0117    11 0E01                     lxi	d,msg1
+  011A    0E 09                       mvi	c,9
+  011C    CD 0DF5                     call	bdos
+  011F    21 013A                     lxi	h,tests		; hl = 0x013a
   0122    7E                    loop:	mov	a,m		    ; a = memory[0x013a] = 6e
   0123    23                    	    inx	h	    	; hl = 0x013b
   0124    B6                    	    ora	m           ; a = a | memory[0x013b] (0x01)
@@ -23,34 +20,6 @@ de = 0x01d9
   0132    0E 09                 	    mvi	c,9
   0134    CD 0DF5               	    call	bdos
   0137    C3 0000               	    jmp	0		; warm boot
-  013A                          tests:
-  013A    016E                  	    dw	add16
-  013C    01CE                  	    dw	alu8i
-  013E    022E                  	    dw	alu8r
-  0140    028E                  	    dw	daa
-  0142    02EE                  	    dw	inca
-  0144    034E                  	    dw	incb
-  0146    03AE                  	    dw	incbc
-  0148    040E                  	    dw	incc
-  014A    046E                  	    dw	incd
-  014C    04CE                  	    dw	incde
-  014E    052E                  	    dw	ince
-  0150    058E                  	    dw	inch
-  0152    05EE                  	    dw	inchl
-  0154    064E                  	    dw	incl
-  0156    06AE                  	    dw	incm
-  0158    070E                  	    dw	incsp
-  015A    076E                  	    dw	ld162
-  015C    07CE                  	    dw	ld166
-  015E    082E                  	    dw	ld16im
-  0160    088E                  	    dw	ld8bd
-  0162    08EE                  	    dw	ld8im
-  0164    094E                  	    dw	ld8rr
-  0166    09AE                  	    dw	lda
-  0168    0A0E                  	    dw	rot8080
-  016A    0A6E                  	    dw	stabd
-  016C    0000                  	    dw	0
-
   0ACE    E5                    stt:	push	h
   0ACF    7E                    	    mov	a,m		; get pointer to test
   0AD0    23                    	    inx	h
@@ -251,72 +220,69 @@ de = 0x01d9
   0C3C    3E 01                 	mvi	a,1
   0C3E    C9                    	ret
   0C3F    F5                    clrmem:	push	psw
-  0C40    C5                    	push	b
-  0C41    D5                    	push	d
-  0C42    E5                    	push	h
-  0C43    36 00                 	mvi	m,0
-  0C45    54                    	mov	d,h
-  0C46    5D                    	mov	e,l
-  0C47    13                    	inx	d
-  0C48    0B                    	dcx	b
+  0C40    C5                    	      push	b
+  0C41    D5                    	      push	d
+  0C42    E5                    	      push	h
+  0C43    36 00                 	      mvi	m,0
+  0C45    54                    	      mov	d,h
+  0C46    5D                    	      mov	e,l
+  0C47    13                    	      inx	d
+  0C48    0B                    	      dcx	b
   0C49    7E                    ldir3:	mov	a,m
-  0C4A    12                    	stax	d
-  0C4B    23                    	inx	h
-  0C4C    13                    	inx	d
-  0C4D    0B                    	dcx	b
-  0C4E    78                    	mov	a,b
-  0C4F    B1                    	ora	c
-  0C50    C2 0C49               	jnz	ldir3
-  0C53    E1                    	pop	h
-  0C54    D1                    	pop	d
-  0C55    C1                    	pop	b
-  0C56    F1                    	pop	psw
-  0C57    C9                    	ret
-  0C58                          initmask:
-  0C58    D5                    	push	d
-  0C59    EB                    	xchg
-  0C5A    01 0028               	lxi	b,20+20
-  0C5D    CD 0C3F               	call	clrmem		; clear work area
-  0C60    EB                    	xchg
-  0C61    06 14                 	mvi	b,20		; byte counter
-  0C63    0E 01                 	mvi	c,1		; first bit
-  0C65    16 00                 	mvi	d,0		; bit counter
-  0C67    5E                    imlp:	mov	e,m
+  0C4A    12                    	      stax	d
+  0C4B    23                    	      inx	h
+  0C4C    13                    	      inx	d
+  0C4D    0B                    	      dcx	b
+  0C4E    78                    	      mov	a,b
+  0C4F    B1                    	      ora	c
+  0C50    C2 0C49               	      jnz	ldir3
+  0C53    E1                    	      pop	h
+  0C54    D1                    	      pop	d
+  0C55    C1                    	      pop	b
+  0C56    F1                    	      pop	psw
+  0C57    C9                    	      ret                
+  0C58    D5                   initmask:push	d
+  0C59    EB                    	      xchg
+  0C5A    01 0028               	      lxi	b,20+20
+  0C5D    CD 0C3F               	      call	clrmem		; clear work area
+  0C60    EB                    	      xchg
+  0C61    06 14                 	      mvi	b,20		; byte counter
+  0C63    0E 01                 	      mvi	c,1		; first bit
+  0C65    16 00                 	      mvi	d,0		; bit counter
+  0C67    5E                    imlp:	  mov	e,m
   0C68    7B                    imlp1:	mov	a,e
-  0C69    A1                    	ana	c
-  0C6A    CA 0C6E               	jz	imlp2
-  0C6D    14                    	inr	d
+  0C69    A1                    	      ana	c
+  0C6A    CA 0C6E               	      jz	imlp2
+  0C6D    14                    	      inr	d
   0C6E    79                    imlp2:	mov	a,c
-  0C6F    07                    	rlc
-  0C70    4F                    	mov	c,a
-  0C71    FE 01                 	cpi	1
-  0C73    C2 0C68               	jnz	imlp1
-  0C76    23                    	inx	h
-  0C77    05                    	dcr	b
-  0C78    C2 0C67               	jnz	imlp
-  0C7B    7A                    	mov	a,d
-  0C7C    E6 F8                 	ani	0f8h
-  0C7E    0F                    	rrc
-  0C7F    0F                    	rrc
-  0C80    0F                    	rrc			; divide by 8 (get byte offset)
-  0C81    6F                    	mov	l,a
-  0C82    26 00                 	mvi	h,0
-  0C84    7A                    	mov	a,d
-  0C85    E6 07                 	ani	7		; bit offset
-  0C87    3C                    	inr	a
-  0C88    47                    	mov	b,a
-  0C89    3E 80                 	mvi	a,080h
+  0C6F    07                    	      rlc
+  0C70    4F                    	      mov	c,a
+  0C71    FE 01                 	      cpi	1
+  0C73    C2 0C68               	      jnz	imlp1
+  0C76    23                    	      inx	h
+  0C77    05                    	      dcr	b
+  0C78    C2 0C67               	      jnz	imlp
+  0C7B    7A                    	      mov	a,d
+  0C7C    E6 F8                 	      ani	0f8h
+  0C7E    0F                    	      rrc
+  0C7F    0F                    	      rrc
+  0C80    0F                    	      rrc			; divide by 8 (get byte offset)
+  0C81    6F                    	      mov	l,a
+  0C82    26 00                 	      mvi	h,0
+  0C84    7A                    	      mov	a,d
+  0C85    E6 07                 	      ani	7		; bit offset
+  0C87    3C                    	      inr	a
+  0C88    47                    	      mov	b,a
+  0C89    3E 80                 	      mvi	a,080h
   0C8B    07                    imlp3:	rlc
-  0C8C    05                    	dcr	b
-  0C8D    C2 0C8B               	jnz	imlp3
-  0C90    D1                    	pop	d
-  0C91    19                    	dad	d
-  0C92    11 0014               	lxi	d,20
-  0C95    19                    	dad	d
-  0C96    77                    	mov	m,a
-  0C97    C9                    	ret
-                                
-                                ; multi-byte counter
+  0C8C    05                    	      dcr	b
+  0C8D    C2 0C8B               	      jnz	imlp3
+  0C90    D1                    	      pop	d
+  0C91    19                    	      dad	d
+  0C92    11 0014               	      lxi	d,20
+  0C95    19                    	      dad	d
+  0C96    77                    	      mov	m,a
+  0C97    C9                    	      ret
   0C98    C5                    count:	push	b
   0C99    D5                    	push	d
   0C9A    E5                    	push	h
@@ -337,8 +303,7 @@ de = 0x01d9
   0CB3    C1                    cntend:	pop	b
   0CB4    D1                    	pop	d
   0CB5    E1                    	pop	h
-  0CB6    C9                    	ret
-                                
+  0CB6    C9                    	ret               
   0CB7    23                    cntlp1:	inx	h
   0CB8    13                    	inx	d
   0CB9    C3 0CA4               	jmp	cntlp
@@ -376,8 +341,6 @@ de = 0x01d9
                                 
   0CE9                          counter: ds	2*20
   0D11                          shifter: ds	2*20
-                                
-                                ; test harness
   0D39    F5                    test:	push	psw
   0D3A    C5                    	    push	b
   0D3B    D5                    	    push	d
@@ -576,19 +539,19 @@ de = 0x01d9
   0EA0    F1                    	pop	psw
   0EA1    C9                    	ret
   0EA2    F5                    initcrc:push	psw
-  0EA3    C5                    	push	b
-  0EA4    E5                    	push	h
-  0EA5    21 0EB6               	lxi	h,crcval
-  0EA8    3E FF                 	mvi	a,0ffh
-  0EAA    06 04                 	mvi	b,4
+  0EA3    C5                    	      push	b
+  0EA4    E5                    	      push	h
+  0EA5    21 0EB6               	      lxi	h,crcval
+  0EA8    3E FF                 	      mvi	a,0ffh
+  0EAA    06 04                 	      mvi	b,4
   0EAC    77                    icrclp:	mov	m,a
-  0EAD    23                    	inx	h
-  0EAE    05                    	dcr	b
-  0EAF    C2 0EAC               	jnz	icrclp
-  0EB2    E1                    	pop	h
-  0EB3    C1                    	pop	b
-  0EB4    F1                    	pop	psw
-  0EB5    C9                    	ret            
+  0EAD    23                    	      inx	h
+  0EAE    05                    	      dcr	b
+  0EAF    C2 0EAC               	      jnz	icrclp
+  0EB2    E1                    	      pop	h
+  0EB3    C1                    	      pop	b
+  0EB4    F1                    	      pop	psw
+  0EB5    C9                    	      ret            
   0EB6                          crcval:	ds	4                        
   0EBA    00 00 00 00           crctab:	db	000h,000h,000h,000h
   0EBE    77 07 30 96           	db	077h,007h,030h,096h
@@ -846,9 +809,34 @@ de = 0x01d9
   12AE    C3 0C 8E A1           	db	0c3h,00ch,08eh,0a1h
   12B2    5A 05 DF 1B           	db	05ah,005h,0dfh,01bh
   12B6    2D 02 EF 8D           	db	02dh,002h,0efh,08dh
-                                
-                                	end
+             
 
+  013A    016E                 tests: dw	add16
+  013C    01CE                  	    dw	alu8i
+  013E    022E                  	    dw	alu8r
+  0140    028E                  	    dw	daa
+  0142    02EE                  	    dw	inca
+  0144    034E                  	    dw	incb
+  0146    03AE                  	    dw	incbc
+  0148    040E                  	    dw	incc
+  014A    046E                  	    dw	incd
+  014C    04CE                  	    dw	incde
+  014E    052E                  	    dw	ince
+  0150    058E                  	    dw	inch
+  0152    05EE                  	    dw	inchl
+  0154    064E                  	    dw	incl
+  0156    06AE                  	    dw	incm
+  0158    070E                  	    dw	incsp
+  015A    076E                  	    dw	ld162
+  015C    07CE                  	    dw	ld166
+  015E    082E                  	    dw	ld16im
+  0160    088E                  	    dw	ld8bd
+  0162    08EE                  	    dw	ld8im
+  0164    094E                  	    dw	ld8rr
+  0166    09AE                  	    dw	lda
+  0168    0A0E                  	    dw	rot8080
+  016A    0A6E                  	    dw	stabd
+  016C    0000                  	    dw	0
 
   016E    FF                    add16:	db	0ffh		; flag mask
   016F    09              +     ..0000:	db	9

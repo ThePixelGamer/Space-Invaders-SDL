@@ -52,16 +52,16 @@ void si8080::load(const char* filename) {
 		registers[i] = 0;
 
 	//each word is a bit starting from bit 7 (x = nothing, ? = not sure, 1 = always on)
-	//input 
-	port[0] = 0x8; //x 1right 1left 1fire 1 1p 2p credit
-	port[1] = 0x0; //dip7 2right 2left 2fire dip6 tilt dip5 dip3
-	port[2] = 0x0; //shift register
 	//output
-	port[3] = 0x0; //00000bbb shift amount
-	port[4] = 0x0; //x x amp extended sound_aliendeath sound_playerdeath sound_shot sound_ufo
-	port[5] = 0x0; //shift data
-	port[6] = 0x0; //x x x sound_ufodeath sound_fleet4 sound_fleet3 sound_fleet2 sound_fleet1
-	port[7] = 0x0; //watchdog
+	portOut[3] = 0b0; //00000bbb shift amount
+	portOut[4] = 0b0; //x x amp extended sound_aliendeath sound_playerdeath sound_shot sound_ufo
+	portOut[5] = 0b0; //shift data
+	portOut[6] = 0b0; //x x x sound_ufodeath sound_fleet4 sound_fleet3 sound_fleet2 sound_fleet1
+	portOut[7] = 0b0; //watchdog
+	//input 0 = on for dips : )
+	portIn[0] = 0b1000; //x 1right 1left 1fire 1 1p 2p credit
+	portIn[1] = 0b1100; //sw1 2right 2left 2fire sw2 1 sw3 sw4 http://www.brentradio.com/images/Other/Docs/SpaceInvaders/dipswitchsettings.txt
+	portIn[2] = 0b0; //shift register
 
 	FILE* rom = fopen(filename, "rb");
 	if (rom == NULL) {
@@ -82,7 +82,7 @@ void si8080::load(const char* filename) {
 				fputs("Reading error", stderr); 
 			}
 			else {
-				if(cmp) {
+				if(cpmB) {
 					pc = 0x100;
 					for(int i = 0; i < pc; i++)
 						memory.push_back(0);
@@ -129,6 +129,7 @@ void si8080::emulateCycle() {
 		opcode = memory[pc];
 		
 	loc = ((uint16_t) registers[H] << 8) + registers[L];
+	aChanged = false;
 
 	cycles += 4;
 
@@ -284,68 +285,6 @@ else {
 	return (~(old ^ diff ^ ans) & 0x10) == 0x10;
 } my implementation of the ac bit*/
 
-void si8080::changeM(uint8_t value) { //it's right now :D
-	if(loc >= vramStart && loc < vramStart + 0x1C00) {
-		int offset = (loc - vramStart) * 8; 
-		int x = offset / 256;
-		int y = 255 - (offset % 256);
-		
-		for(int i = 0; i < 8; i++) {
-			bool bit = (((value >> i) & 0x1) == 0x1);
-			int location = ((y * 224) - (i * 224) + x) * 3;
-			
-			if(bit) {
-				if(y > 240) {
-					if(x < 16) {							//white 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0xFF;			//B
-					}	
-					else if(x < 118) {						//green 
-						pixels[location] = 0x0; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0x0;			//B
-					}	
-					else if(x < 224) {						//white 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0xFF;			//B
-					}
-				}
-				else if(y > 184) {							//green 
-						pixels[location] = 0x0; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0x0;			//B
-				}
-				else if(y > 64) {							//white 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0xFF;			//B
-				}
-				else if(y > 32) {							//red 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0x0;			//G
-						pixels[location+2] = 0x0;			//B
-				}
-				else if(y > 0) {							//white 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0xFF;			//B
-				}
-			}
-			else {
-				pixels[location] = 0x0;
-				pixels[location+1] = 0x0;
-				pixels[location+2] = 0x0;
-			}
-		}
-		
-		drawFlag = true;
-	}
-
-	memory[loc] = value;
-} 
-
 void si8080::lxi() {
 	uint8_t reg = (opcode >> 3) & 0x6;
 	loc = (memory[pc+2] << 8) + memory[pc+1];
@@ -427,7 +366,8 @@ void si8080::mvi() {
 
 void si8080::rlc() {
 	cy = (((registers[A] & 0x80) == 0x80) ? 1 : 0);
-	registers[A] = (registers[A] << 1) + (cy << 7); 
+	registers[A] = (registers[A] << 1) + cy; 
+	aChanged = true;
 }
 
 void si8080::dad() {
@@ -454,6 +394,7 @@ void si8080::ldax() {
 	registers[A] = memory[loc];
 	
 	cycles += 3;
+	aChanged = true;
 }
 
 void si8080::dcx() {
@@ -473,16 +414,19 @@ void si8080::dcx() {
 void si8080::rrc() {
 	cy = (((registers[A] & 0x1) == 0x1) ? 1 : 0);
 	registers[A] = (registers[A] >> 1) + (cy << 7);
+	aChanged = true;
 }
 
 void si8080::ral() {
 	registers[A] = (registers[A] << 1) + cy; 
 	cy = (((registers[A] & 0x80) == 0x80) ? 1 : 0);
+	aChanged = true;
 }
 
 void si8080::rar() {
 	registers[A] = (registers[A] >> 1) + (cy << 7); 
 	cy = (((registers[A] & 0x1) == 0x1) ? 1 : 0);
+	aChanged = true;
 }
 
 void si8080::shld() {
@@ -519,6 +463,7 @@ void si8080::lhld() {
 
 void si8080::cma() {
 	registers[A] = !registers[A];
+	aChanged = true;
 }
 
 void si8080::sta() {
@@ -539,6 +484,7 @@ void si8080::lda() {
 	
 	pc += 2;
 	cycles += 9;
+	aChanged = true;
 }
 
 void si8080::cmc() {
@@ -567,7 +513,7 @@ void si8080::mov() {
 void si8080::math() {
 	uint8_t data = registers[opcode & 0x7];
 
-	if(opcode > 0xc0) {
+	if((opcode & 0xc0) == 0xc0) {
 		data = memory[pc+1];
 		pc += 1;
 		cycles += 3;
@@ -578,14 +524,26 @@ void si8080::math() {
 	}
 
 	switch((opcode >> 3) & 0x7) {
-		case 0x0: registers[A] = setCond(registers[A] + data, registers[A], data, 0x4); break;
-		case 0x1: registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy), 0x4); break;
-		case 0x2: registers[A] = setCond(registers[A] - data, registers[A], data, 0x4); break;
-		case 0x3: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy), 0x4); break;
-		case 0x4: setCond(registers[A] &= data, 0, 0, 0x2); break;
-		case 0x5: setCond(registers[A] ^= data, 0, 0, 0x2); break;
-		case 0x6: setCond(registers[A] |= data, 0, 0, 0x2); break;
-		case 0x7: setCond(registers[A] - data, registers[A], data, 0x4); break;
+		case 0x0: registers[A] = setCond(registers[A] + data, registers[A], data, 0x4); aChanged = true; break;
+		case 0x1: registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy), 0x4); aChanged = true; break;
+		case 0x2: registers[A] = setCond(registers[A] - data, registers[A], data, 0x4); aChanged = true; break;
+		case 0x3: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy), 0x4); aChanged = true; break;
+		case 0x4: { //ana and ani
+			bool tmp = ((registers[A] & 0xf) == 0x0); 
+
+			registers[A] = setCond(registers[A] & data, 0, 0, 0x2);
+			if(opcode == 0xe6)
+				z = tmp;
+
+			aChanged = true; 
+		}
+			break;
+		case 0x5: setCond(registers[A] ^= data, 0, 0, 0x2); aChanged = true; break; //these probably need to be fixed
+		case 0x6: setCond(registers[A] |= data, 0, 0, 0x2); aChanged = true; break; 
+		case 0x7: { //cmp and cpi
+			z = (registers[A] == data);
+			cy = ((registers[A] & 0x80) == (data & 0x80)) ? (data > registers[A]) : (data < registers[A]); 
+		} break;
 	}
 }
 
@@ -608,6 +566,7 @@ void si8080::pop() { //11 rp(2) 0001
 		z  = (flags & 0x40) >> 6;
 		p  = (flags & 0x4) >> 2;
 		registers[A] = memory[sp+1];
+		aChanged = true;
 	}
 	else {
 		registers[reg+1] = memory[sp];
@@ -689,16 +648,16 @@ void si8080::call() {
 
 void si8080::out() {
 	loc = memory[pc+1];
-	port[loc + 1] = registers[A];
+	portOut[loc-2] = registers[A]; //2->0
 	pc += 1;
 	cycles += 6;
 }
 
 void si8080::in() {
 	loc = memory[pc+1];
-	registers[A] = port[loc - 1];
+	registers[A] = portIn[loc-1]; //1->0
 	pc += 1;
-	cycles += 6;
+	cycles += 6; 
 }
 
 void si8080::xthl() {
@@ -740,3 +699,65 @@ void si8080::cpm() {
 
 	ret();
 }
+
+void si8080::changeM(uint8_t value) { //it was getting in the way tbh
+	if(loc >= vramStart && loc < vramStart + 0x1C00) {
+		int offset = (loc - vramStart) * 8; 
+		int x = offset / 256;
+		int y = 255 - (offset % 256);
+		
+		for(int i = 0; i < 8; i++) {
+			bool bit = (((value >> i) & 0x1) == 0x1);
+			int location = ((y * 224) - (i * 224) + x) * 3;
+			
+			if(bit) {
+				if(y > 240) {
+					if(x < 16) {							//white 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0xFF;			//B
+					}	
+					else if(x < 118) {						//green 
+						pixels[location] = 0x0; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0x0;			//B
+					}	
+					else if(x < 224) {						//white 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0xFF;			//B
+					}
+				}
+				else if(y > 184) {							//green 
+						pixels[location] = 0x0; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0x0;			//B
+				}
+				else if(y > 64) {							//white 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0xFF;			//B
+				}
+				else if(y > 32) {							//red 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0x0;			//G
+						pixels[location+2] = 0x0;			//B
+				}
+				else if(y > 0) {							//white 
+						pixels[location] = 0xFF; 			//R
+						pixels[location+1] = 0xFF;			//G
+						pixels[location+2] = 0xFF;			//B
+				}
+			}
+			else {
+				pixels[location] = 0x0;
+				pixels[location+1] = 0x0;
+				pixels[location+2] = 0x0;
+			}
+		}
+		
+		drawFlag = true;
+	}
+
+	memory[loc] = value;
+} 

@@ -1,4 +1,4 @@
-                  working   flags?
+                  working  flags?
 0x00 	NOP         good    no
 0x01 	LXI B,D16   nt      no  
 0x02 	STAX B      nt      no   
@@ -23,7 +23,7 @@
 0x15 	DCR D       nt      yes
 0x16 	MVI D, D8   nt      no
 0x17 	RAL         nt      yes
-0x19 	DAD D       nt      yes
+0x19 	DAD D       good    yes
 0x1a 	LDAX D      good    no
 0x1b 	DCX D       nt      no
 0x1c 	INR E       nt      yes
@@ -226,7 +226,7 @@
 0xe8 	RPE         nt      no
 0xe9 	PCHL        nt      no
 0xea 	JPE adr     nt      no
-0xeb 	XCHG        nt      no
+0xeb 	XCHG        good    no
 0xec 	CPE adr     nt      no
 0xee 	XRI D8      nt      yes
 0xef 	RST 0x28    nt      no

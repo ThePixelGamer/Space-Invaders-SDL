@@ -28,11 +28,11 @@ void keyboard(bool);
 int main(int argc, char* args[]) {
 	time_point<steady_clock> fpsTimer(steady_clock::now());
     if(argc > 1) {
-		core->cmp = true;
+		core->cpmB = true;
 		core->load(args[1]);
 	}
 	else {
-		core->load("invaders.COM");
+		core->load("invaders.com");
 	}
 
 	SDL_Renderer*				renderer;
@@ -68,50 +68,61 @@ int main(int argc, char* args[]) {
 			}
 		}
 		
-		FPS = duration_cast<frame>(steady_clock::now() - fpsTimer);
-		if(FPS.count() >= 1) {
-			fpsTimer = steady_clock::now();
-			SDL_SetWindowTitle(window, ("fps:" + to_string(60/FPS.count()) + " dt:" + to_string(duration_cast<ms>(FPS).count()) + " Invaders").c_str());
+		if(!core->cpmB) {
+			FPS = duration_cast<frame>(steady_clock::now() - fpsTimer);
+			if(FPS.count() >= 1) {
+				fpsTimer = steady_clock::now();
+				SDL_SetWindowTitle(window, ("fps:" + to_string(60/FPS.count()) + " dt:" + to_string(duration_cast<ms>(FPS).count()) + " Invaders").c_str());
 
-			uint32_t cycCount = 0;
-			while(cycCount <= CLOCK / 60) {
-				core->cycBefore = core->cycles;
-				
-				if(!core->hlt)
-					core->emulateCycle();
-				
-				cycCount += core->cycles - core->cycBefore;
-				
-				if(core->cycles >= (CLOCK / 120)) {
-					if(core->interrupt) {
-						core->opcode = (vInterrupt) ? 0xcf : 0xd7;
+				uint32_t cycCount = 0;
+				while(cycCount <= CLOCK / 60) {
+					core->cycBefore = core->cycles;
+					
+					if(!core->hlt)
 						core->emulateCycle();
-						core->cycles -= 11;
+					
+					cycCount += core->cycles - core->cycBefore;
+					
+					if(core->cycles >= (CLOCK / 120)) {
+						if(core->interrupt) {
+							core->opcode = (vInterrupt) ? 0xcf : 0xd7;
+							core->emulateCycle();
+							core->cycles -= 11;
+						}
+						core->cycles -= (CLOCK / 120);
+						vInterrupt = !vInterrupt;
 					}
-					core->cycles -= (CLOCK / 120);
-					vInterrupt = !vInterrupt;
-				}
 
-				if(core->opcode == 0xd3) { //write
-					switch(core->loc) {
-						case 2:
-							core->port[2] = (x << (core->port[4] & 0x7)) + y; //prob something wrong
-							break;
-						case 4:
-							y = x;
-							x = core->port[5];
-							break;
-						default:
-							cout << +core->loc << endl;
-							break;
+					if(core->opcode == 0xd3) { //write
+						switch(core->loc) {
+							case 2:
+								core->portIn[2] = (x << (core->portOut[0] & 0x7)) + (y >> (8 - (core->portOut[0] & 0x7))); //prob something wrong
+								break;
+							case 3: break; //samples + extended play
+							case 4:
+								y = x;
+								x = core->portOut[2];
+								break;
+							case 5: break; //samples + amp?
+							case 6: break; //writes A to this port, debug thing?
+							default:
+								cout << +core->loc << endl;
+								break;
+						}
 					}
 				}
+				
+				SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
+				SDL_RenderClear(renderer);
+				SDL_RenderCopy(renderer, texture, NULL, NULL);
+				SDL_RenderPresent(renderer);
 			}
-		
-			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
-			SDL_RenderClear(renderer);
-			SDL_RenderCopy(renderer, texture, NULL, NULL);
-			SDL_RenderPresent(renderer);
+		}
+		else {
+			if(!core->hlt)
+				core->emulateCycle();
+
+			core->cycles = 0;
 		}
 	}
 
@@ -132,12 +143,26 @@ void keyboard(bool press){
 		if(state[SDL_SCANCODE_R])
 			SDL_SetWindowSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-		if(state[SDL_SCANCODE_1]) core->port[1] = (core->port[1] ^ 0x4) + 0x4; //Player1 Start
-		if(state[SDL_SCANCODE_2]) core->port[1] = (core->port[1] ^ 0x2) + 0x2; //Player2 Start
+		if(state[SDL_SCANCODE_1]) 			core->portIn[0] = (core->portIn[0] & 0b11111011) + 0b0100; //Player1 Start
+		if(state[SDL_SCANCODE_2]) 			core->portIn[0] = (core->portIn[0] & 0b11111101) + 0b0010; //Player2 Start
+		if(state[SDL_SCANCODE_SPACE]) 		core->portIn[0] = (core->portIn[0] & 0b11101111) + 0b00010000; //Player1 Shot
+		if(state[SDL_SCANCODE_A]) 			core->portIn[0] = (core->portIn[0] & 0b11011111) + 0b00100000; //Player1 Left
+		if(state[SDL_SCANCODE_D]) 			core->portIn[0] = (core->portIn[0] & 0b10111111) + 0b01000000; //Player1 Right
+		if(state[SDL_SCANCODE_KP_0]) 		core->portIn[1] = (core->portIn[1] & 0b11101111) + 0b00010000; //Player2 Shot
+		if(state[SDL_SCANCODE_KP_4]) 		core->portIn[1] = (core->portIn[1] & 0b11011111) + 0b00100000; //Player2 Left
+		if(state[SDL_SCANCODE_KP_6]) 		core->portIn[1] = (core->portIn[1] & 0b10111111) + 0b01000000; //Player2 Right
 	}
 	else {
-		if(!state[SDL_SCANCODE_1]) core->port[1] ^= 0x4; //clear bit2 in port[1]
-		if(!state[SDL_SCANCODE_2]) core->port[1] ^= 0x2; //clear bit1 in port[1]
+		if(core->aChanged) {
+			if(!state[SDL_SCANCODE_1]) 		core->portIn[0] &= 0b11111011; //clear bit2 in portIn[0]
+			if(!state[SDL_SCANCODE_2]) 		core->portIn[0] &= 0b11111101; //clear bit1 in portIn[0]
+			if(!state[SDL_SCANCODE_SPACE]) 	core->portIn[0] &= 0b11101111; //clear bit4 in portIn[0]
+			if(!state[SDL_SCANCODE_A]) 		core->portIn[0] &= 0b11011111; //clear bit5 in portIn[0]
+			if(!state[SDL_SCANCODE_D]) 		core->portIn[0] &= 0b10111111; //clear bit6 in portIn[0]
+			if(!state[SDL_SCANCODE_KP_0]) 	core->portIn[1] &= 0b11101111; //clear bit4 in portIn[1]
+			if(!state[SDL_SCANCODE_KP_4]) 	core->portIn[1] &= 0b11011111; //clear bit5 in portIn[1]
+			if(!state[SDL_SCANCODE_KP_6]) 	core->portIn[1] &= 0b10111111; //clear bit6 in portIn[1]
+		}
 	}
 }
 
