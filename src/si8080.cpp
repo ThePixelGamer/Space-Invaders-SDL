@@ -702,9 +702,9 @@ void si8080::cpm() {
 
 void si8080::changeM(uint8_t value) { //it was getting in the way tbh
 	if(loc >= vramStart && loc < vramStart + 0x1C00) {
-		int offset = (loc - vramStart) * 8; 
-		int x = offset / 256;
-		int y = 255 - (offset % 256);
+		int offset = (loc - vramStart) * 8; //send this and the value over and copy the rest of the code below
+		int x = offset / 256;				//and update the screen every 1/60th of a second (but don't send the
+		int y = 255 - (offset % 256);		//pixels at that framerate)
 		
 		for(int i = 0; i < 8; i++) {
 			bool bit = (((value >> i) & 0x1) == 0x1);
