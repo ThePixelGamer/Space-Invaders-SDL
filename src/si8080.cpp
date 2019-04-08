@@ -529,11 +529,7 @@ void si8080::math() {
 		case 0x2: registers[A] = setCond(registers[A] - data, registers[A], data, 0x4); aChanged = true; break;
 		case 0x3: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy), 0x4); aChanged = true; break;
 		case 0x4: { //ana and ani
-			bool tmp = ((registers[A] & 0xf) == 0x0); 
-
 			registers[A] = setCond(registers[A] & data, 0, 0, 0x2);
-			if(opcode == 0xe6)
-				z = tmp;
 
 			aChanged = true; 
 		}
