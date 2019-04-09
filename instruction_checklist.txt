@@ -1,19 +1,19 @@
                   working  flags?
 0x00 	NOP         good    no
-0x01 	LXI B,D16   nt      no  
+0x01 	LXI B,D16   good    no  
 0x02 	STAX B      nt      no   
 0x03 	INX B       nt      no
 0x04 	INR B       nt      yes
-0x05 	DCR B       nt      yes
-0x06 	MVI B, D8   nt      no
+0x05 	DCR B       good    yes (unknown on underflows and potential flags)
+0x06 	MVI B, D8   good    no
 0x07 	RLC         nt      yes
 0x08 	WARM BOOT   nt      no			
-0x09 	DAD B       nt      yes
+0x09 	DAD B       good    yes (unknown on overflows and potential flags)
 0x0a 	LDAX B      nt      no
 0x0b 	DCX B       nt      no
 0x0c 	INR C       nt      yes  
 0x0d 	DCR C       nt      yes
-0x0e 	MVI C,D8    nt      no
+0x0e 	MVI C,D8    good    no
 0x0f 	RRC         nt      yes
 0x10 	CPM 0x5     good    no
 0x11 	LXI D,D16   good    no
@@ -23,7 +23,7 @@
 0x15 	DCR D       nt      yes
 0x16 	MVI D, D8   nt      no
 0x17 	RAL         nt      yes
-0x19 	DAD D       good    yes
+0x19 	DAD D       good    yes  (unknown on overflows and potential flags)
 0x1a 	LDAX D      good    no
 0x1b 	DCX D       nt      no
 0x1c 	INR E       nt      yes
@@ -31,18 +31,18 @@
 0x1e 	MVI E,D8    nt      no
 0x1f 	RAR         nt      yes
 0x21 	LXI H,D16   good    no
-0x22 	SHLD adr    nt      no
-0x23 	INX H       good    no
+0x22 	SHLD adr    good    no
+0x23 	INX H       good    no (unknown on overflows and potential flags)
 0x24 	INR H       nt      yes
 0x25 	DCR H       nt      yes
-0x26 	MVI H,D8    nt      no
+0x26 	MVI H,D8    good    no
 0x27 	DAA         nt      yes
-0x29 	DAD H       nt      yes
-0x2a 	LHLD adr    nt      no
+0x29 	DAD H       good    yes (unknown on overflows and potential flags)
+0x2a 	LHLD adr    good    no
 0x2b 	DCX H       nt      no
 0x2c 	INR L       nt      yes
 0x2d 	DCR L       nt      yes
-0x2e 	MVI L, D8   nt      no
+0x2e 	MVI L, D8   good    no
 0x2f 	CMA         nt      no
 0x31 	LXI SP, D16 good    no
 0x32 	STA adr     nt      no
@@ -52,11 +52,11 @@
 0x36 	MVI M,D8    nt      no
 0x37 	STC         nt      yes
 0x39 	DAD SP      nt      yes
-0x3a 	LDA adr     nt      no
+0x3a 	LDA adr     good    no
 0x3b 	DCX SP      nt      no
 0x3c 	INR A       nt      yes
-0x3d 	DCR A       nt      yes
-0x3e 	MVI A,D8    nt      no
+0x3d 	DCR A       good    yes (unknown on underflows and potential flags)
+0x3e 	MVI A,D8    good    no
 0x3f 	CMC         nt      yes
 0x40 	MOV B,B     nt      no
 0x41 	MOV B,C     nt      no
@@ -64,7 +64,7 @@
 0x43 	MOV B,E     nt      no
 0x44 	MOV B,H     nt      no
 0x45 	MOV B,L     nt      no
-0x46 	MOV B,M     nt      no
+0x46 	MOV B,M     good    no
 0x47 	MOV B,A     nt      no
 0x48 	MOV C,B     nt      no
 0x49 	MOV C,C     nt      no
@@ -73,7 +73,7 @@
 0x4c 	MOV C,H     nt      no
 0x4d 	MOV C,L     nt      no
 0x4e 	MOV C,M     nt      no
-0x4f 	MOV C,A     nt      no
+0x4f 	MOV C,A     good    no
 0x50 	MOV D,B     nt      no
 0x51 	MOV D,C     nt      no
 0x52 	MOV D,D     nt      no
@@ -97,7 +97,7 @@
 0x64 	MOV H,H     nt      no
 0x65 	MOV H,L     nt      no
 0x66 	MOV H,M     nt      no
-0x67 	MOV H,A     nt      no
+0x67 	MOV H,A     good    no
 0x68 	MOV L,B     nt      no
 0x69 	MOV L,C     nt      no
 0x6a 	MOV L,D     nt      no
@@ -105,7 +105,7 @@
 0x6c 	MOV L,H     nt      no
 0x6d 	MOV L,L     nt      no
 0x6e 	MOV L,M     nt      no
-0x6f 	MOV L,A     nt      no
+0x6f 	MOV L,A     good    no
 0x70 	MOV M,B     nt      no
 0x71 	MOV M,C     nt      no
 0x72 	MOV M,D     nt      no
@@ -113,14 +113,14 @@
 0x74 	MOV M,H     nt      no
 0x75 	MOV M,L     nt      no
 0x76 	HLT         nt      no
-0x77 	MOV M,A     nt      no
+0x77 	MOV M,A     good    no
 0x78 	MOV A,B     nt      no
-0x79 	MOV A,C     nt      no
+0x79 	MOV A,C     good    no
 0x7a 	MOV A,D     nt      no
 0x7b 	MOV A,E     nt      no
-0x7c 	MOV A,H     nt      no
+0x7c 	MOV A,H     good    no
 0x7d 	MOV A,L     nt      no
-0x7e 	MOV A,M     nt      no
+0x7e 	MOV A,M     good    no
 0x7f 	MOV A,A     nt      no
 0x80 	ADD B       nt      yes
 0x81 	ADD C       nt      yes
@@ -187,26 +187,26 @@
 0xbe 	CMP M       nt      yes
 0xbf 	CMP A       nt      yes
 0xc0 	RNZ         nt      no
-0xc1 	POP B       nt      no
-0xc2 	JNZ adr     nt      no
+0xc1 	POP B       good    no
+0xc2 	JNZ adr     good    no
 0xc3 	JMP adr     good    no
 0xc4 	CNZ adr     nt      no
-0xc5 	PUSH B      nt      no
-0xc6 	ADI D8      nt      yes
+0xc5 	PUSH B      good    no
+0xc6 	ADI D8      good    yes (unknown on overflows and potential flags)
 0xc7 	RST 0x0     nt      no
 0xc8 	RZ          nt      no
-0xc9 	RET         nt      no
-0xca 	JZ adr      nt      no
+0xc9 	RET         good    no
+0xca 	JZ adr      good    no
 0xcc 	CZ adr      nt      no
-0xcd 	CALL adr    nt      no
+0xcd 	CALL adr    good    no
 0xce 	ACI D8      nt      yes
 0xcf 	RST 0x8     nt      no
 0xd0 	RNC         nt      no
-0xd1 	POP D       nt      no
+0xd1 	POP D       good    no
 0xd2 	JNC adr     nt      no
 0xd3 	OUT D8      nt      no
 0xd4 	CNC adr     nt      no
-0xd5 	PUSH D      nt      no
+0xd5 	PUSH D      good    no
 0xd6 	SUI D8      nt      yes
 0xd7 	RST 0x10    nt      no
 0xd8 	RC          nt      no
@@ -216,11 +216,11 @@
 0xde 	SBI D8      nt      yes
 0xdf 	RST 0x18    nt      no
 0xe0 	RPO         nt      no
-0xe1 	POP H       nt      no
+0xe1 	POP H       good    no
 0xe2 	JPO adr     nt      no
 0xe3 	XTHL        nt      no
 0xe4 	CPO adr     nt      no
-0xe5 	PUSH H      nt      no
+0xe5 	PUSH H      good    no
 0xe6 	ANI D8      nt      yes
 0xe7 	RST 0x20    nt      no
 0xe8 	RPE         nt      no
@@ -231,17 +231,17 @@
 0xee 	XRI D8      nt      yes
 0xef 	RST 0x28    nt      no
 0xf0 	RP          nt      no
-0xf1 	POP PSW     nt      yes
+0xf1 	POP PSW     good    yes
 0xf2 	JP adr      nt      no
 0xf3 	DI          nt      no
 0xf4 	CP adr      nt      no
-0xf5 	PUSH PSW    nt      no
+0xf5 	PUSH PSW    good    no
 0xf6 	ORI D8      nt      yes
 0xf7 	RST 0x30    nt      no
 0xf8 	RM          nt      no
-0xf9 	SPHL        nt      no
+0xf9 	SPHL        good    no
 0xfa 	JM adr      nt      no
 0xfb 	EI          nt      no
 0xfc 	CM adr      nt      no
-0xfe 	CPI D8      nt      yes
+0xfe 	CPI D8      good    yes
 0xff 	RST 0x38    nt      no

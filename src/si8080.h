@@ -29,7 +29,7 @@ public:
     uint16_t		portIn[3];    //read 1, read 2, read 3
 	
     int       		cycles, cycBefore;
-    bool            interrupt, hlt, drawFlag, aChanged, cpmB, debug;
+    bool            interrupt, hlt, drawFlag, cpmB, debug;
     uint8_t         opcode;
 
 	void            emulateCycle();

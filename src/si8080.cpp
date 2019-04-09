@@ -60,7 +60,7 @@ void si8080::load(const char* filename) {
 	portOut[7] = 0b0; //watchdog
 	//input 0 = on for dips : )
 	portIn[0] = 0b1000; //x 1right 1left 1fire 1 1p 2p credit
-	portIn[1] = 0b1100; //sw1 2right 2left 2fire sw2 1 sw3 sw4 http://www.brentradio.com/images/Other/Docs/SpaceInvaders/dipswitchsettings.txt
+	portIn[1] = 0b1000; //sw1 2right 2left 2fire sw2 tilt(0) sw3 sw4 http://www.brentradio.com/images/Other/Docs/SpaceInvaders/dipswitchsettings.txt
 	portIn[2] = 0b0; //shift register
 
 	FILE* rom = fopen(filename, "rb");
@@ -129,7 +129,6 @@ void si8080::emulateCycle() {
 		opcode = memory[pc];
 		
 	loc = ((uint16_t) registers[H] << 8) + registers[L];
-	aChanged = false;
 
 	cycles += 4;
 
@@ -367,7 +366,6 @@ void si8080::mvi() {
 void si8080::rlc() {
 	cy = (((registers[A] & 0x80) == 0x80) ? 1 : 0);
 	registers[A] = (registers[A] << 1) + cy; 
-	aChanged = true;
 }
 
 void si8080::dad() {
@@ -394,7 +392,6 @@ void si8080::ldax() {
 	registers[A] = memory[loc];
 	
 	cycles += 3;
-	aChanged = true;
 }
 
 void si8080::dcx() {
@@ -414,19 +411,16 @@ void si8080::dcx() {
 void si8080::rrc() {
 	cy = (((registers[A] & 0x1) == 0x1) ? 1 : 0);
 	registers[A] = (registers[A] >> 1) + (cy << 7);
-	aChanged = true;
 }
 
 void si8080::ral() {
 	registers[A] = (registers[A] << 1) + cy; 
 	cy = (((registers[A] & 0x80) == 0x80) ? 1 : 0);
-	aChanged = true;
 }
 
 void si8080::rar() {
 	registers[A] = (registers[A] >> 1) + (cy << 7); 
 	cy = (((registers[A] & 0x1) == 0x1) ? 1 : 0);
-	aChanged = true;
 }
 
 void si8080::shld() {
@@ -463,7 +457,6 @@ void si8080::lhld() {
 
 void si8080::cma() {
 	registers[A] = !registers[A];
-	aChanged = true;
 }
 
 void si8080::sta() {
@@ -484,7 +477,6 @@ void si8080::lda() {
 	
 	pc += 2;
 	cycles += 9;
-	aChanged = true;
 }
 
 void si8080::cmc() {
@@ -524,18 +516,13 @@ void si8080::math() {
 	}
 
 	switch((opcode >> 3) & 0x7) {
-		case 0x0: registers[A] = setCond(registers[A] + data, registers[A], data, 0x4); aChanged = true; break;
-		case 0x1: registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy), 0x4); aChanged = true; break;
-		case 0x2: registers[A] = setCond(registers[A] - data, registers[A], data, 0x4); aChanged = true; break;
-		case 0x3: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy), 0x4); aChanged = true; break;
-		case 0x4: { //ana and ani
-			registers[A] = setCond(registers[A] & data, 0, 0, 0x2);
-
-			aChanged = true; 
-		}
-			break;
-		case 0x5: setCond(registers[A] ^= data, 0, 0, 0x2); aChanged = true; break; //these probably need to be fixed
-		case 0x6: setCond(registers[A] |= data, 0, 0, 0x2); aChanged = true; break; 
+		case 0x0: registers[A] = setCond(registers[A] + data, registers[A], data, 0x4); break;
+		case 0x1: registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy), 0x4); break;
+		case 0x2: registers[A] = setCond(registers[A] - data, registers[A], data, 0x4); break;
+		case 0x3: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy), 0x4); break;
+		case 0x4: registers[A] = setCond(registers[A] & data, 0, 0, 0x2); break;
+		case 0x5: registers[A] = setCond(registers[A] ^ data, 0, 0, 0x2); break; //these probably need to be fixed
+		case 0x6: registers[A] = setCond(registers[A] | data, 0, 0, 0x2); break; 
 		case 0x7: { //cmp and cpi
 			z = (registers[A] == data);
 			cy = ((registers[A] & 0x80) == (data & 0x80)) ? (data > registers[A]) : (data < registers[A]); 
@@ -562,7 +549,6 @@ void si8080::pop() { //11 rp(2) 0001
 		z  = (flags & 0x40) >> 6;
 		p  = (flags & 0x4) >> 2;
 		registers[A] = memory[sp+1];
-		aChanged = true;
 	}
 	else {
 		registers[reg+1] = memory[sp];

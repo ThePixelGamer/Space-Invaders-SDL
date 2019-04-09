@@ -53,22 +53,9 @@ int main(int argc, char* args[]) {
 	//game in and out
 	uint8_t x, y;
 	while(run) {
-		//Handle Updates
-		while(SDL_PollEvent(&event)) {
-			switch(event.type) {
-			  	case SDL_KEYDOWN:
-					state = SDL_GetKeyboardState(NULL);
-					keyboard(true);
-					break;
 
-			  	case SDL_KEYUP:
-					state = SDL_GetKeyboardState(NULL);
-					keyboard(false);
-					break;
-			}
-		}
-		
 		if(!core->cpmB) {
+
 			FPS = duration_cast<frame>(steady_clock::now() - fpsTimer);
 			if(FPS.count() >= 1) {
 				fpsTimer = steady_clock::now();
@@ -81,19 +68,7 @@ int main(int argc, char* args[]) {
 					if(!core->hlt)
 						core->emulateCycle();
 					
-					cycCount += core->cycles - core->cycBefore;
-					
-					if(core->cycles >= (CLOCK / 120)) {
-						if(core->interrupt) {
-							core->opcode = (vInterrupt) ? 0xcf : 0xd7;
-							core->emulateCycle();
-							core->cycles -= 11;
-						}
-						core->cycles -= (CLOCK / 120);
-						vInterrupt = !vInterrupt;
-					}
-
-					if(core->opcode == 0xd3) { //write
+					if(core->opcode == 0xd3) { //handle output
 						switch(core->loc) {
 							case 2:
 								core->portIn[2] = (x << (core->portOut[0] & 0x7)) + (y >> (8 - (core->portOut[0] & 0x7))); //prob something wrong
@@ -107,6 +82,34 @@ int main(int argc, char* args[]) {
 							case 6: break; //writes A to this port, debug thing?
 							default:
 								cout << +core->loc << endl;
+								break;
+						}
+					}
+					if((core->opcode == 0xdb) && (keyupB == true)) {
+						//copy keyups to input ports
+					}
+
+					cycCount += core->cycles - core->cycBefore;
+					if(core->cycles >= (CLOCK / 120)) {
+						if(core->interrupt) {
+							core->opcode = (vInterrupt) ? 0xcf : 0xd7;
+							core->emulateCycle();
+							core->cycles -= 11;
+						}
+						core->cycles -= (CLOCK / 120);
+						vInterrupt = !vInterrupt;
+					}
+
+					while(SDL_PollEvent(&event)) { //handle input
+						switch(event.type) {
+							case SDL_KEYDOWN:
+								state = SDL_GetKeyboardState(NULL);
+								keyboard(true);
+								break;
+
+							case SDL_KEYUP:
+								state = SDL_GetKeyboardState(NULL);
+								//make a copy of the keyups (could use the existing keyboard function)
 								break;
 						}
 					}
@@ -143,6 +146,7 @@ void keyboard(bool press){
 		if(state[SDL_SCANCODE_R])
 			SDL_SetWindowSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
 
+		if(state[SDL_SCANCODE_C]) 			core->portIn[0] = (core->portIn[0] & 0b11111110) + 0b0001; //Coin Deposit :D
 		if(state[SDL_SCANCODE_1]) 			core->portIn[0] = (core->portIn[0] & 0b11111011) + 0b0100; //Player1 Start
 		if(state[SDL_SCANCODE_2]) 			core->portIn[0] = (core->portIn[0] & 0b11111101) + 0b0010; //Player2 Start
 		if(state[SDL_SCANCODE_SPACE]) 		core->portIn[0] = (core->portIn[0] & 0b11101111) + 0b00010000; //Player1 Shot
@@ -153,16 +157,15 @@ void keyboard(bool press){
 		if(state[SDL_SCANCODE_KP_6]) 		core->portIn[1] = (core->portIn[1] & 0b10111111) + 0b01000000; //Player2 Right
 	}
 	else {
-		if(core->aChanged) {
-			if(!state[SDL_SCANCODE_1]) 		core->portIn[0] &= 0b11111011; //clear bit2 in portIn[0]
-			if(!state[SDL_SCANCODE_2]) 		core->portIn[0] &= 0b11111101; //clear bit1 in portIn[0]
-			if(!state[SDL_SCANCODE_SPACE]) 	core->portIn[0] &= 0b11101111; //clear bit4 in portIn[0]
-			if(!state[SDL_SCANCODE_A]) 		core->portIn[0] &= 0b11011111; //clear bit5 in portIn[0]
-			if(!state[SDL_SCANCODE_D]) 		core->portIn[0] &= 0b10111111; //clear bit6 in portIn[0]
-			if(!state[SDL_SCANCODE_KP_0]) 	core->portIn[1] &= 0b11101111; //clear bit4 in portIn[1]
-			if(!state[SDL_SCANCODE_KP_4]) 	core->portIn[1] &= 0b11011111; //clear bit5 in portIn[1]
-			if(!state[SDL_SCANCODE_KP_6]) 	core->portIn[1] &= 0b10111111; //clear bit6 in portIn[1]
-		}
+		if(!state[SDL_SCANCODE_C]) 		core->portIn[0] &= 0b11111110; //clear bit0 in portIn[0]
+		if(!state[SDL_SCANCODE_1]) 		core->portIn[0] &= 0b11111011; //clear bit2 in portIn[0]
+		if(!state[SDL_SCANCODE_2]) 		core->portIn[0] &= 0b11111101; //clear bit1 in portIn[0]
+		if(!state[SDL_SCANCODE_SPACE]) 	core->portIn[0] &= 0b11101111; //clear bit4 in portIn[0]
+		if(!state[SDL_SCANCODE_A]) 		core->portIn[0] &= 0b11011111; //clear bit5 in portIn[0]
+		if(!state[SDL_SCANCODE_D]) 		core->portIn[0] &= 0b10111111; //clear bit6 in portIn[0]
+		if(!state[SDL_SCANCODE_KP_0]) 	core->portIn[1] &= 0b11101111; //clear bit4 in portIn[1]
+		if(!state[SDL_SCANCODE_KP_4]) 	core->portIn[1] &= 0b11011111; //clear bit5 in portIn[1]
+		if(!state[SDL_SCANCODE_KP_6]) 	core->portIn[1] &= 0b10111111; //clear bit6 in portIn[1]
 	}
 }
 

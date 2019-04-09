@@ -199,19 +199,19 @@
   0C1B                          shfbit:	ds	1
   0C1C                          shfbyt:	ds	2
   0C1E    C5                    nxtsbit: push	b
-  0C1F    E5                    	push	h
-  0C20    2A 0C1C               	lhld	shfbyt
-  0C23    46                    	mov	b,m
-  0C24    21 0C1B               	lxi	h,shfbit
-  0C27    7E                    	mov	a,m
-  0C28    4F                    	mov	c,a
-  0C29    07                    	rlc
-  0C2A    77                    	mov	m,a
-  0C2B    FE 01                 	cpi	1
-  0C2D    C2 0C37               	jnz	nsb1
-  0C30    2A 0C1C               	lhld	shfbyt
-  0C33    23                    	inx	h
-  0C34    22 0C1C               	shld	shfbyt
+  0C1F    E5                    	       push	h
+  0C20    2A 0C1C               	       lhld	shfbyt
+  0C23    46                    	       mov	b,m
+  0C24    21 0C1B               	       lxi	h,shfbit
+  0C27    7E                    	       mov	a,m
+  0C28    4F                    	       mov	c,a
+  0C29    07                    	       rlc
+  0C2A    77                    	       mov	m,a
+  0C2B    FE 01                 	       cpi	1
+  0C2D    C2 0C37               	       jnz	nsb1
+  0C30    2A 0C1C               	       lhld	shfbyt
+  0C33    23                    	       inx	h
+  0C34    22 0C1C               	       shld	shfbyt
   0C37    78                    nsb1:	mov	a,b
   0C38    A1                    	ana	c
   0C39    E1                    	pop	h
