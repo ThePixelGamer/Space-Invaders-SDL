@@ -87,8 +87,8 @@ void si8080::load(const char* filename) {
 					for(int i = 0; i < pc; i++)
 						memory.push_back(0);
 
-					memory[0x0] = 0x8; //warm boot
-					memory[0x5] = 0x10; //cpm call
+					memory[0x0] = 0x10; //warm boot
+					memory[0x5] = 0x20; //cpm call
 					uint16_t tmp = pc + romSize + 0x2000;
 					memory[0x6] = tmp & 0xff;
 					memory[0x7] = (tmp >> 8) & 0xff;
@@ -138,7 +138,8 @@ void si8080::emulateCycle() {
 	switch(opcode) {
 	//0x00-0x3f
 		case 0x0:															break; 
-					case 0x10:							cpm();				break; //cpm 5
+					case 0x10:												break; //warm boot
+								case 0x20:				cpm();				break; //cpm 5
 		case 0x1:	case 0x11:	case 0x21:	case 0x31:	lxi();				break;
 		case 0x2:	case 0x12:							stax(); 			break; 
 								case 0x22:				shld();				break;
@@ -151,7 +152,6 @@ void si8080::emulateCycle() {
 					case 0x17:							ral();				break;
 								case 0x27:				daa();				break;
 											case 0x37:	stc();				break;
-		case 0x8: 															break; //warm boot
 		case 0x9:	case 0x19:	case 0x29:	case 0x39: 	dad();				break;
 		case 0xa:	case 0x1a:							ldax(); 			break;
 								case 0x2a:				lhld();				break;

@@ -1,0 +1,14 @@
+CPI $00
+JZ "START"    
+JMP "DONE"
+nop*8
+nop*8
+nop*8
+nop*8
+nop*8
+nop*8
+CP
+RET
+rst $10: nop*8
+
+rst $18: nop*8
