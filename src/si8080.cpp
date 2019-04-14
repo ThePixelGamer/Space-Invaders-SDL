@@ -274,7 +274,7 @@ uint8_t si8080::checkParity(uint8_t ans) {
 			count++;
 	}
 
-	return ((count % 2) == 1);
+	return (count % 2);
 }
 
 /*if(ans >= old) {
@@ -683,8 +683,8 @@ void si8080::cpm() {
 }
 
 void si8080::changeM(uint8_t value) { //it was getting in the way tbh
-	if(loc >= vramStart && loc < vramStart + 0x1C00) {
-		int offset = (loc - vramStart) * 8; //send this and the value over and copy the rest of the code below
+	if(loc >= 0x2400 && loc < 0x4000) {
+		int offset = (loc - 0x2400) * 8; //send this and the value over and copy the rest of the code below
 		int x = offset / 256;				//and update the screen every 1/60th of a second (but don't send the
 		int y = 255 - (offset % 256);		//pixels at that framerate)
 		

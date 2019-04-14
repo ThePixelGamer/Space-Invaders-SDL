@@ -1,7 +1,0 @@
-0:  JNZ Print
-1:  CNZ Print
-2:  JZ $0004
-3:  CALL Print
-4:  CZ $0006
-5:  CALL Print
-6:  
