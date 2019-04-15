@@ -254,28 +254,28 @@ uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff, uint8_t flags) 
 		cy = 0;
 		s = ((ans & 0x80) == 0x80);
 		z = ((ans & 0xff) == 0);
-		p = checkParity(ans & 0xff);
+		p = !__builtin_parity(ans & 0xff);
 	}
 	if((flags & 0x4) == 0x4) {
 		cy = (ans > 0xff);
 		ac = (((old ^ diff ^ ans) & 0x10) == 0x10);
 		s = ((ans & 0x80) == 0x80);
 		z = ((ans & 0xff) == 0);
-		p = checkParity(ans & 0xff);
+		p = !__builtin_parity(ans & 0xff);
 	}
 
 	return ans & 0xff;
 }
 
-uint8_t si8080::checkParity(uint8_t ans) {
-	int count = 0;
-	for(unsigned int i = 0; i < 8; i++) {
-		if(((ans >> i) & 0x1) == 1) 
-			count++;
-	}
+// uint8_t si8080::checkParity(uint8_t ans) {
+// 	int count = 0;
+// 	for(int i = 0; i < 8; i++) {
+// 		if(((ans >> i) & 0x1) == 0x1) 
+// 			count++;
+// 	}
 
-	return (count % 2);
-}
+// 	return (count % 2);
+// }
 
 /*if(ans >= old) {
 	return ((old ^ diff ^ ans) & 0x10) == 0x10;
@@ -443,7 +443,7 @@ void si8080::daa() {
         setCond(registers[A] + 0x60, registers[A], 0x60, 0x4);
         cy = 1;
     }
-    p = checkParity(registers[A]);
+    p = !__builtin_parity(registers[A] & 0xff);
 }
 
 void si8080::lhld() {

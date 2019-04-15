@@ -5,7 +5,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <bitset>
 #include <vector>
 
 #include "SDL2/SDL.h"
@@ -35,8 +34,6 @@ public:
 	void            emulateCycle();
 	bool            checkCond();
 	uint8_t         setCond(uint16_t, uint8_t, uint8_t, uint8_t);
-	uint8_t         checkParity(uint8_t);
-    uint8_t         checkAC(uint16_t, uint8_t, uint8_t);
 	void            changeM(uint8_t);   //probably a really dumb way to do it
     void            load(const char*);
 
