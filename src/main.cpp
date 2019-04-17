@@ -30,6 +30,7 @@ void keyboard(bool);
 int main(int argc, char* args[]) {
 	time_point<steady_clock> fpsTimer(steady_clock::now());
     if(argc > 1) {
+		core->cpmB = true;
 		core->load(args[1]);
 	}
 	else {

@@ -133,7 +133,7 @@ void si8080::emulateCycle() {
 	cycles += 4;
 
 	if(debug)
-		fprintf(log, "PC: %4X", pc);
+		fprintf(log, "PC: %04X ", pc);
 	
 	switch(opcode) {
 	//0x00-0x3f
@@ -232,8 +232,7 @@ void si8080::emulateCycle() {
 	}
 
 	if(debug) {
-		fprintf(log, "\tSP: %4X\tA: %2X\tB: %2X\tC: %2X\tD: %2X\tE: %2X\tH: %2X\tL: %2X\n", sp, registers[A], registers[B], registers[C], registers[D], registers[E], registers[H], registers[L]);
-		fprintf(log, "OP: %4X\tM: %4X\t\tCy: %i\tAC: %i\tS: %i\tZ: %i\tP: %i\tCycles: %i\n\n", opcode, loc, cy, ac, s, z, p, cycles);
+		fprintf(log, "OP:%02X SP:%04X BC:%04X DE:%04X HL:%04X A:%02X Cy:%i AC:%i S:%i Z:%i P:%i Cyc:%i\n", opcode, sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p, cycles);
 	} 
 
 	pc++;
