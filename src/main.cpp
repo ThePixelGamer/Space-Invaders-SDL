@@ -15,7 +15,6 @@ using ms = duration<float, milli>;
 
 #define SCREEN_HEIGHT 256
 #define SCREEN_WIDTH 224
-
 #define CLOCK 2000000
 
 SDL_Window*		window;
@@ -29,6 +28,7 @@ uint8_t port2 = 0b1000;
 void keyboard(bool);
 int main(int argc, char* args[]) {
 	time_point<steady_clock> fpsTimer(steady_clock::now());
+
     if(argc > 1) {
 		core->cpmB = false;
 		core->load(args[1]);
@@ -42,7 +42,6 @@ int main(int argc, char* args[]) {
 	SDL_Event					event;
 	
 	SDL_Init(SDL_INIT_VIDEO);
-	
 	SDL_DisplayMode DM;
 	SDL_GetCurrentDisplayMode(0, &DM);
 
@@ -51,8 +50,6 @@ int main(int argc, char* args[]) {
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     frame FPS{};
-
-	//game in and out
 	uint8_t x, y;
 	while(run) {
 		if(!core->cpmB) {
@@ -143,7 +140,6 @@ int main(int argc, char* args[]) {
 	}
 
 	fclose(core->log); 
-
 	SDL_DestroyTexture(texture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window); 
@@ -151,7 +147,7 @@ int main(int argc, char* args[]) {
 	return 0;   
 }
 
-void keyboard(bool press){	
+void keyboard(bool press) {	
 	if(press) {
 		if(state[SDL_SCANCODE_ESCAPE])
 			run = false; //Much Safer Exit :)
@@ -181,31 +177,3 @@ void keyboard(bool press){
 		if(!state[SDL_SCANCODE_KP_6]) 	port2 = port2 & 0b10111111; //clear bit6 in portIn[1]
 	}
 }
-
-/*
-		0x1  = 0000 0001
-		0x2  = 0000 0010
-		0x4  = 0000 0100
-		0x8  = 0000 1000
-		0x10 = 0001 0000
-		0x20 = 0010 0000
-		0x40 = 0100 0000
-		0x80 = 1000 0000
-
-		0	coin (0 when active)
-		1	P2 start button
-		2	P1 start button
-		3	?
-		4	P1 shoot button
-		5	P1 joystick left
-		6	P1 joystick right
-		7	?
-	
-		0,1	dipswitch number of lives (0:3,1:4,2:5,3:6)
-		2	tilt 'button'
-		3	dipswitch bonus life at 1:1000,0:1500
-		4	P2 shoot button
-		5	P2 joystick left
-		6	P2 joystick right
-		7	dipswitch coin info 1:off,0:on
-*/
