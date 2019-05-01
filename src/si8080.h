@@ -26,7 +26,7 @@ public:
 
 	void            emulateCycle();
 	bool            checkCond();
-	uint8_t         setCond(uint16_t, uint8_t, uint8_t, uint8_t);
+	uint8_t         setCond(uint16_t, uint8_t, uint8_t);
 	void            changeM(uint8_t);  
     void            load(const char*);
 

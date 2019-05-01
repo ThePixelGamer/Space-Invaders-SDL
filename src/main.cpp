@@ -75,11 +75,6 @@ int main(int argc, char* args[]) {
 						}
 					}
 
-					core->cycBefore = core->cycles;
-					
-					if(!core->hlt)
-						core->emulateCycle();
-					
 					if(core->opcode == 0xd3) { //handle output
 						switch(core->loc) {
 							case 2:
@@ -113,12 +108,17 @@ int main(int argc, char* args[]) {
 						}
 					}
 
+					core->cycBefore = core->cycles;
+
+					if(!core->hlt)
+						core->emulateCycle();
+					
 					cycCount += core->cycles - core->cycBefore;
 					if(core->cycles >= (CLOCK / 120)) {
 						if(core->interrupt) {
 							core->opcode = (vInterrupt) ? 0xcf : 0xd7;
 							core->emulateCycle();
-							core->cycles -= 11;
+							core->opcode = 0; //lazy hack to "fix" the if statement in emulateCycle
 						}
 						core->cycles -= (CLOCK / 120);
 						vInterrupt = !vInterrupt;
