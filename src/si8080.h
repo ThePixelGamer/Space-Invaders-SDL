@@ -1,5 +1,7 @@
 #pragma once
 
+#include "SDL2/SDL.h"
+
 #include <iostream>
 #include <iomanip>
 #include <string.h>
@@ -7,30 +9,25 @@
 #include <stdlib.h>
 #include <vector>
 
-#include "SDL2/SDL.h"
-
 using namespace std;
 
 class si8080 {
 public:
-	vector<uint8_t> memory;             //4kb
-	uint16_t        pc, sp, loc;        //counter + stack pointer
-    uint8_t         registers[8];       //b, c, d, e, h, l, not using, a
-    uint8_t         opcode, cy, ac, z, p, s, interrupt, hlt, cpmB, debug;
+    vector<uint8_t> memory;
+    uint8_t         opcode, cy, ac, z, p, s, interrupt, hlt, debug, registers[8];
+    uint16_t        pc, sp, loc;
     uint32_t        romSize, vramStart, cycles, cycBefore;
 
     FILE*           log;
-	uint8_t*		pixels;       //duplicate of vram but in 24 rgb format
-    uint8_t		    portOut[5];   //write 2, write 3, write 4, write 5, write 6
-    uint16_t		portIn[3];    //read 1, read 2, read 3
+    uint8_t*        pixels; //duplicate of vram but in 24 rgb format
+    uint8_t         portOut[5], portIn[3];
 
-	void            emulateCycle();
-	bool            checkCond();
-	uint8_t         setCond(uint16_t, uint8_t, uint8_t);
-	void            changeM(uint8_t);  
+    void            emulateCycle();
+    bool            checkCond();
+    uint8_t         setCond(uint16_t, uint8_t, uint8_t);
+    void            changeM(uint8_t);  
     void            load(const char*);
 
-    void            cpm(); //cp/m implementation
     void            lxi(); //0x00 - 0x3f
     void            stax();
     void            inx();

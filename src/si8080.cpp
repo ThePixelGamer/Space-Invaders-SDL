@@ -13,14 +13,13 @@ void si8080::emulateCycle() {
 		opcode = memory[pc];
 		
 	loc = (registers[H] << 8) + registers[L];
+	cycBefore = cycles;
 
 	if(debug)
 		fprintf(log, "PC:%04X OP:%02X ", pc, opcode);
 	
 	switch(opcode) {
 		case 0x0:															break; //0x00-0x3f
-					case 0x10:												break; //warm boot
-								case 0x20:				cpm();				break; //cpm 5
 		case 0x1:	case 0x11:	case 0x21:	case 0x31:	lxi();				break;
 		case 0x2:	case 0x12:							stax(); 			break; 
 								case 0x22:				shld();				break;
@@ -113,7 +112,6 @@ void si8080::emulateCycle() {
 	pc++;
 }
 
-//non-conditional
 void si8080::lxi() {
 	uint8_t reg = (opcode >> 3) & 0x6;
 	loc = (memory[pc+2] << 8) + memory[pc+1];
@@ -377,7 +375,6 @@ void si8080::xchg() {
 	registers[H] = tmp1;
 }
 
-//conditionals	
 void si8080::inr() {
 	uint8_t reg = (opcode >> 3) & 0x7;
 	loc = ((uint16_t) registers[H] << 8) + registers[L];
@@ -506,20 +503,6 @@ void si8080::math() {
 	}
 }
 
-//cpm + custom functions				
-void si8080::cpm() {
-	switch(registers[C]) {
-		case 0x2: printf("%c", memory[registers[E]]); break;
-		case 0x9: 
-			for(uint16_t location = (registers[D] << 8) + registers[E]; memory[location] != 0x24; location++)
-				printf("%c", memory[location]);
-
-			cout << "$";
-			break;
-	}
-	ret();
-}
-
 void si8080::changeM(uint8_t value) { //it was getting in the way tbh
 	if(loc >= 0x2400 && loc < 0x4000) {
 		int offset = (loc - 0x2400) * 8; //send this and the value over and copy the rest of the code below
@@ -553,7 +536,7 @@ void si8080::changeM(uint8_t value) { //it was getting in the way tbh
 						pixels[location+1] = 0xFF;			//G
 						pixels[location+2] = 0x0;			//B
 				}
-				else if(y > 64) {							//white 
+				else if(y > 48) {							//white 
 						pixels[location] = 0xFF; 			//R
 						pixels[location+1] = 0xFF;			//G
 						pixels[location+2] = 0xFF;			//B
@@ -617,7 +600,6 @@ bool si8080::checkCond() {
 	return false;
 }
 
-//flags - 0x2: logic 0x4: math
 uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff) {
 	cy = (ans > 0xff);
 	ac = (((old ^ diff ^ ans) & 0x10) == 0x10);
@@ -629,7 +611,6 @@ uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff) {
 }
 
 void si8080::load(const char* filename) {
-	//load rom
 	FILE* rom = fopen(filename, "rb");
 	if (rom == NULL) {
 		fputs("File error", stderr); 
@@ -649,35 +630,13 @@ void si8080::load(const char* filename) {
 				fputs("Reading error", stderr); 
 			}
 			else {
-				if(cpmB) {
-					pc = 0x100;
-					for(uint16_t i = 0; i < pc; i++)
-						memory.push_back(0);
-
-					memory[0x0] = 0x10; //warm boot
-					memory[0x5] = 0x20; //cpm call
-					uint32_t tmp = pc + romSize + 0x2000;
-					memory[0x6] = tmp & 0xff;
-					memory[0x7] = (tmp >> 8) & 0xff;
-				}
-				else {
-					pc = 0x0;
-				}
-
-				for(uint32_t i = pc; i < (pc + romSize); i++)
-					memory.push_back(buffer[i-pc]);
-
-				for(uint32_t i = (pc + romSize); i < (pc + romSize + 0x2000); i++)
+				int tmp = romSize + 0x2000;
+				for(uint32_t i = 0; i < tmp; i++)
 					memory.push_back(0);	
 
-				sp = 0;
-		
-				cycles = 0;
-				cycBefore = 0;
-
-				interrupt = false;
-				hlt = false;
-				debug = true;
+				pc = sp = cycles = cycBefore = 0;
+				interrupt = hlt = false;
+				debug = false;
 
 				fclose(rom);
 				free(buffer);
@@ -690,41 +649,13 @@ void si8080::load(const char* filename) {
 
 	for(int x = 0; x < 224; x++) { 
 		for(int y = 0; y < 256; y++) { //2400, 2401.. bottom left to upper left then next row
-			int pixel = ((y * 224) + x) * 3;
-
-            if(y < 32)
-                for(int rgb = 0; rgb < 3; rgb++) 
-                    pixels[pixel + rgb] = 0xFF; //white  
-            else if(y < 64) {
-                pixels[pixel] = 0xFF;     //r 100%
-                pixels[pixel+1] = 0x00; //g      0%
-                pixels[pixel+2] = 0x00; //b   0%
-            }
-            else if(y < 184)
-                for(int rgb = 0; rgb < 3; rgb++) 
-                    pixels[pixel + rgb] = 0xFF; //white 
-        	else if(y < 240) {
-                pixels[pixel] = 0x00;     //r   0%
-                pixels[pixel+1] = 0xFF; //g    100%
-                pixels[pixel+2] = 0x00; //b   0%
-            }
-			else if(y < 256) {
-                if(x < 16) 
-                    for(int rgb = 0; rgb < 3; rgb++) 
-                        pixels[pixel + rgb] = 0xFF; //white 
-                else if(x < 118) {
-                    pixels[pixel] = 0x00;     //r   0%
-                    pixels[pixel+1] = 0xFF; //g    100%
-                    pixels[pixel+2] = 0x00; //b   0%
-                }
-                else if(x < 224) 
-                    for(int rgb = 0; rgb < 3; rgb++) 
-                        pixels[pixel + rgb] = 0xFF; //white 
-            }
+			pixels[(x * y)] 	= 0x0;
+			pixels[(x * y) + 1] = 0x0;
+			pixels[(x * y) + 2] = 0x0;
 		}
 	}
 
-	for(int i = 0; i < 9; i++)
+	for(int i = 0; i <= 8; i++)
 		registers[i] = 0;
 
 	//each word is a bit starting from bit 7 (x = nothing, ? = not sure, 1 = always on)
@@ -737,6 +668,8 @@ void si8080::load(const char* filename) {
 	portOut[3] = 0b0; //x x x sound_ufodeath sound_fleet4 sound_fleet3 sound_fleet2 sound_fleet1
 	portOut[4] = 0b0; //watchdog
 
-	log = fopen("log.txt", "w");
-	fprintf(log, "Loaded: %s\nSize: %u\n", filename, romSize);
+	if(debug) {
+		log = fopen("log.txt", "w");
+		fprintf(log, "Loaded: %s\nSize: %u\n", filename, romSize);
+	}
 }
