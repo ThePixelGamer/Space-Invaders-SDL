@@ -1,20 +1,22 @@
 # Space-Invaders-SDL
-http://emulator101.com/ then 8080 reference in the top right
-http://www.emulator101.com/reference/8080-by-opcode.html
-
 Space Invaders, (C) Taito 1978, Midway 1979
 
-CPU: Intel 8080 @ 2MHz (CPU similar to the (newer) Zilog Z80)
+## CPU
+Intel 8080 @ 2MHz (CPU similar to the (newer) Zilog Z80)
 
-Interrupts: $cf (RST 8) at the start of vblank, $d7 (RST $10) at the end of vblank.
+## Interrupts
+$cf (RST 8) at the start of vblank, $d7 (RST $10) at the end of vblank.
 
-Video: 256(x)*224(y) @ 60Hz, vertical monitor. Colours are simulated with a
+## Video
+256(x)*224(y) @ 60Hz, vertical monitor. Colours are simulated with a
 plastic transparent overlay and a background picture.
-Video hardware is very simple: 7168 bytes 1bpp bitmap (32 bytes per scanline).
+7168 bytes 1 bit per pixel (32 bytes per scanline).
 
-Sound: SN76477 and samples.
+## Sound
+SN76477 and samples.
 
-Memory map:
+## Memory map
+	
 	ROM
 	$0000-$07ff:	invaders.h
 	$0800-$0fff:	invaders.g
@@ -27,7 +29,8 @@ Memory map:
 	
 	$4000-:		RAM mirror
 
-Ports:
+## Ports
+	
 	Read 1
 	BIT	0	coin (0 when active)
 		1	P2 start button
@@ -59,9 +62,8 @@ Ports:
 	(write ports 3,5,6 can be left unemulated, read port 1=$01 and 2=$00
 	will make the game run, but but only in attract mode)
 
-I haven't looked into sound details.
-
-16 bit shift register:
+## 16 bit shift register
+	
 	f              0	bit
 	xxxxxxxxyyyyyyyy
 	
@@ -85,36 +87,3 @@ I haven't looked into sound details.
 	xxxxxxxxyyyyyyyy
 	
 	Reading from port 3 returns said result.
-
-Overlay dimensions (screen rotated 90 degrees anti-clockwise):
-	,_______________________________.
-	|WHITE            ^             |
-	|                32             |
-	|                 v             |
-	|-------------------------------|
-	|RED              ^             |
-	|                32             |
-	|                 v             |
-	|-------------------------------|
-	|WHITE                          |
-	|         < 224 >               |
-	|                               |
-	|                 ^             |
-	|                120            |
-	|                 v             |
-	|                               |
-	|                               |
-	|                               |
-	|-------------------------------|
-	|GREEN                          |
-	| ^                  ^          |
-	|56        ^        56          |
-	| v       72         v          |
-	|____      v      ______________|
-	|  ^  |          | ^            |
-	|<16> |  < 118 > |16   < 122 >  |
-	|  v  |          | v            |
-	|WHITE|          |         WHITE|
-	`-------------------------------'
-	
-	Way of out of proportion :P
