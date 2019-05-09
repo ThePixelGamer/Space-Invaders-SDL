@@ -57,14 +57,14 @@ void si8080::emulateCycle() {
 	cycBefore = cycles;
 
 	if(debugB)
-		fprintf(log, "PC:%04X OP:%02X ", pc, opcode);
+		fprintf(log, "PC:%04x OP:%02x ", pc, opcode);
 	
 	(this->*opcodeTable[opcode])();
 	cycles += cyclesTable[opcode];
 	pc += pcTable[opcode];
 
 	if(debugB)
-		fprintf(log, "SP:%04X BC:%04X DE:%04X HL:%04X A:%02X Cy:%i AC:%i S:%i Z:%i P:%i Cyc:%i\n",  sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p, cycles);
+		fprintf(log, "SP:%04x BC:%04x DE:%04x HL:%04x A:%02x Cy:%i AC:%i S:%i Z:%i P:%i\n",  sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p);
 }
 
 void si8080::nop() {}
@@ -89,9 +89,8 @@ void si8080::stax() {
 
 void si8080::inx() {
 	uint8_t reg = (opcode >> 3) & 0x6;
- 	if(reg == 0x6) {
-		sp = (uint16_t)(sp + 1);
-	}
+ 	if(reg == 0x6) 
+		sp += 1;
 	else {
 		loc = ((registers[reg] << 8) + registers[reg+1]) + 1;
 		registers[reg+1] = loc & 0xff;
@@ -101,7 +100,6 @@ void si8080::inx() {
 
 void si8080::inr() {
 	uint8_t reg = (opcode >> 3) & 0x7;
-	loc = ((uint16_t) registers[H] << 8) + registers[L];
 
 	if(reg == 0x6)
 		changeM(setCond(memory[loc] + 1, memory[loc], 1));
@@ -111,7 +109,6 @@ void si8080::inr() {
 
 void si8080::dcr() {
 	uint8_t reg = (opcode >> 3) & 0x7;
-	loc = ((uint16_t) registers[H] << 8) + registers[L];
 
 	if(reg == 0x6)
 		changeM(setCond((memory[loc] - 1) & 0xFF, memory[loc], 1)); 
@@ -121,7 +118,6 @@ void si8080::dcr() {
 
 void si8080::mvi() {
 	uint8_t reg = (opcode >> 3) & 0x7;
-	loc = ((uint16_t) registers[H] << 8) + registers[L];
 	if(reg == 0x6)
 		changeM(memory[pc+1]);
 	else 
@@ -135,18 +131,15 @@ void si8080::rlc() {
 
 void si8080::dad() {
 	uint8_t reg = (opcode >> 3) & 0x6;
-	uint32_t tmp = loc;
 
-	if(reg == 0x6) {
-		tmp += sp;
-	}
-	else {
-		tmp += (registers[reg] << 8) + registers[reg+1];
-	}
+	if(reg == 0x6)
+		loc += sp;
+	else
+		loc += (registers[reg] << 8) + registers[reg+1];
 
-	registers[L] = tmp & 0xff;
-	registers[H] = (tmp >> 8) & 0xff;
-	cy = (tmp > 0xffff);
+	registers[L] = loc & 0xff;
+	registers[H] = (loc >> 8) & 0xff;
+	cy = (loc > 0xffff);
 } 
 
 void si8080::ldax() {
@@ -158,8 +151,9 @@ void si8080::ldax() {
 
 void si8080::dcx() {
 	uint8_t reg = (opcode >> 3) & 0x6;
+
 	if(reg == 0x6) 
-		sp = (uint16_t)(sp - 1);
+		sp -= 1;
 	else {
 		loc = ((registers[reg] << 8) + registers[reg+1]) - 1;
 		registers[reg+1] = loc & 0xff;
@@ -193,12 +187,10 @@ void si8080::daa() {
     uint8_t lsb = registers[A] & 0xf;
     uint8_t msb = registers[A] >> 4;
 
-    if (ac || lsb > 9) {
+    if (ac || lsb > 9)
         registers[A] = setCond(registers[A] + 0x6, registers[A], 0x6);
-    }
-    if (cy || msb > 9) {
+    if (cy || msb > 9)
         registers[A] = setCond(registers[A] + 0x60, registers[A], 0x60);
-    }
 }
 
 void si8080::lhld() {
@@ -208,7 +200,7 @@ void si8080::lhld() {
 }
 
 void si8080::cma() {
-	registers[A] = (registers[A] == 1) ? 0 : 1;
+	registers[A] = (registers[A]) ? 0 : 1;
 }
 
 void si8080::sta() {
@@ -226,7 +218,7 @@ void si8080::lda() {
 }
 
 void si8080::cmc() {
-	cy = (cy == 1) ? 0 : 1;
+	cy = (cy) ? 0 : 1;
 }
 
 void si8080::mov() {
@@ -409,7 +401,7 @@ void si8080::changeM(uint8_t value) { //it was getting in the way tbh
 		int y = 255 - (offset % 256);	 //pixels at that framerate)
 		
 		for(int i = 0; i < 8; i++) {
-			bool bit = (((value >> i) & 0x1) == 0x1);
+			bool bit = (value & (1 << i)) != 0;
 			int location = ((y * 224) - (i * 224) + x) * 3;
 			
 			if(bit) {
@@ -518,7 +510,7 @@ void si8080::load(const char* filename) {
 		}
 	}
 
-	for(int i = 0; i <= 8; i++)
+	for(int i = 0; i < 8; i++)
 		registers[i] = 0;
 
 	//each word is a bit starting from bit 7 (x = nothing, ? = not sure, 1 = always on)
@@ -531,8 +523,6 @@ void si8080::load(const char* filename) {
 	portOut[3] = 0b0; //x x x sound_ufodeath sound_fleet4 sound_fleet3 sound_fleet2 sound_fleet1
 	portOut[4] = 0b0; //watchdog
 
-	if(debugB) {
+	if(debugB)
 		log = fopen("log.txt", "w");
-		fprintf(log, "Loaded: %s\nSize: %u\n", filename, romSize);
-	}
 }

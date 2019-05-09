@@ -30,6 +30,7 @@ Mix_Chunk		*wav1, *wav2, *wav3, *wav4, *wav5, *wav6, *wav7, *wav8, *wav9, *wav10
 si8080* core = new si8080();
 bool run = true, vInterrupt = true;
 uint8_t port1 = 0b1000, port2 = 0b1000, x, y, offset;
+uint32_t cycCount;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
@@ -37,7 +38,7 @@ int main(int argc, char* args[]) {
 	SDL_GetCurrentDisplayMode(0, &dm);
 
 	window = SDL_CreateWindow("Space Invaders", (dm.w/2)-(SCREEN_WIDTH/2), (dm.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH*2, SCREEN_HEIGHT*2, SDL_WINDOW_RESIZABLE);
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	renderer = SDL_CreateRenderer(window, -1, 0);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 	Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 640);
@@ -60,14 +61,18 @@ int main(int argc, char* args[]) {
 	}
 
 	time_point<steady_clock> fpsTimer(steady_clock::now());
-	frame FPS{};
+	frame fps{};
+	seconds secs{};
 	while(run) {
-		FPS = duration_cast<frame>(steady_clock::now() - fpsTimer);
-		if(FPS.count() >= 1) {
-			fpsTimer = steady_clock::now();
-			SDL_SetWindowTitle(window, ("fps:" + to_string(60/FPS.count()) + " Invaders").c_str());
+		fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
+		secs = duration_cast<seconds>(fps);
 
-			uint32_t cycCount = 0;
+		if(secs.count() >= 1) {
+			SDL_SetWindowTitle(window, ("fps:" + to_string(fps.count()) + " Invaders").c_str());
+		}
+		if(fps.count() >= 1) {
+			fpsTimer = steady_clock::now();
+			cycCount = 0;
 			while(cycCount <= FRAME) {
 				while(SDL_PollEvent(&event)) { //user input
 					switch(event.type) {
@@ -157,15 +162,15 @@ int main(int argc, char* args[]) {
 						core->memory[pctmp] = ((vInterrupt) ? 0xcf : 0xd7);
 						core->emulateCycle();
 						core->memory[pctmp] = optmp;
+						core->cycles -= 11;
 					}
 					
 					core->cycles -= HALFFRAME;
 					vInterrupt = !vInterrupt;
 				}
 			}
-
+			
 			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
-			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
 		}
