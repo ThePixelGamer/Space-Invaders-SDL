@@ -56,14 +56,14 @@ void si8080::emulateCycle() {
 	loc = (registers[H] << 8) + registers[L];
 	cycBefore = cycles;
 
-	if(debug)
+	if(debugB)
 		fprintf(log, "PC:%04X OP:%02X ", pc, opcode);
 	
 	(this->*opcodeTable[opcode])();
 	cycles += cyclesTable[opcode];
 	pc += pcTable[opcode];
 
-	if(debug)
+	if(debugB)
 		fprintf(log, "SP:%04X BC:%04X DE:%04X HL:%04X A:%02X Cy:%i AC:%i S:%i Z:%i P:%i Cyc:%i\n",  sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p, cycles);
 }
 
@@ -335,7 +335,7 @@ void si8080::rst() { //11 exp(3) 111
 	pc = (opcode & 0x38);
 
 	hltB = false;
-	interrupt = false;
+	interruptB = false;
 }
 
 void si8080::ret() {
@@ -387,7 +387,7 @@ void si8080::xchg() {
 }
 
 void si8080::di() {
-	interrupt = false;
+	interruptB = false;
 }
 
 void si8080::pchl() {
@@ -399,7 +399,7 @@ void si8080::sphl() {
 }
 
 void si8080::ei() {
-	interrupt = true;
+	interruptB = true;
 }
 
 void si8080::changeM(uint8_t value) { //it was getting in the way tbh
@@ -497,8 +497,8 @@ void si8080::load(const char* filename) {
 					memory.push_back(0);	
 
 				pc = sp = cycles = cycBefore = 0;
-				interrupt = hltB = false;
-				debug = true;
+				interruptB = hltB = false;
+				debugB = true;
 
 				fclose(rom);
 				free(buffer);
@@ -531,7 +531,7 @@ void si8080::load(const char* filename) {
 	portOut[3] = 0b0; //x x x sound_ufodeath sound_fleet4 sound_fleet3 sound_fleet2 sound_fleet1
 	portOut[4] = 0b0; //watchdog
 
-	if(debug) {
+	if(debugB) {
 		log = fopen("log.txt", "w");
 		fprintf(log, "Loaded: %s\nSize: %u\n", filename, romSize);
 	}

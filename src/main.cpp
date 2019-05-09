@@ -1,5 +1,6 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_video.h"
+#include "SDL2/SDL_mixer.h"
 
 #include <unistd.h>
 #include <algorithm>
@@ -22,8 +23,9 @@ SDL_Window*		window;
 SDL_Renderer*	renderer;
 SDL_Texture*	texture;
 SDL_Event		event;
-SDL_DisplayMode dm;
 const Uint8*	state;
+SDL_DisplayMode dm;
+Mix_Chunk		*wav1, *wav2, *wav3, *wav4, *wav5, *wav6, *wav7, *wav8, *wav9, *wav10;
 
 si8080* core = new si8080();
 bool run = true, vInterrupt = true;
@@ -31,12 +33,25 @@ uint8_t port1 = 0b1000, port2 = 0b1000, x, y, offset;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
-	SDL_Init(SDL_INIT_VIDEO);
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 	SDL_GetCurrentDisplayMode(0, &dm);
 
 	window = SDL_CreateWindow("Space Invaders", (dm.w/2)-(SCREEN_WIDTH/2), (dm.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH*2, SCREEN_HEIGHT*2, SDL_WINDOW_RESIZABLE);
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+	Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 640);
+	Mix_Volume(-1, MIX_MAX_VOLUME/8);
+	wav1 = Mix_LoadWAV("./sounds/spaceship_move.wav");	
+	wav2 = Mix_LoadWAV("./sounds/player_shot.wav");
+	wav3 = Mix_LoadWAV("./sounds/player_hit.wav");
+	wav4 = Mix_LoadWAV("./sounds/invaders_hit.wav");
+	wav5 = Mix_LoadWAV("./sounds/spaceship_hit.wav");
+	wav6 = Mix_LoadWAV("./sounds/invaders_move1.wav");
+	wav7 = Mix_LoadWAV("./sounds/invaders_move2.wav");
+	wav8 = Mix_LoadWAV("./sounds/invaders_move3.wav");
+	wav9 = Mix_LoadWAV("./sounds/invaders_move4.wav");
+	wav10 = Mix_LoadWAV("./sounds/spaceship_hit.wav"); //extra life
 
 	if(argc > 1) {
 		core->load(args[1]);
@@ -79,9 +94,8 @@ int main(int argc, char* args[]) {
 						case 3:	
 							core->portIn[2] = (x << offset) + (y >> (8 - offset));
 						break;
-						default:
-							cout << +core->loc << endl;
-						break;
+
+						default: cout << +core->loc << endl; break;
 					}
 				}
 				if(core->opcode == 0xd3) { //game output
@@ -93,15 +107,39 @@ int main(int argc, char* args[]) {
 							y = x;
 							x = core->portOut[2];
 						break;
+
 						case 3: 
-						break; //samples + extended play
-						case 5: 
-						break; //samples + amp?
-						case 6: 
-						break; //writes A to this port, debug thing?
-						default:
-							cout << +core->loc << endl;
+							if(core->soundB) {
+								if((core->portOut[1] & 0x1) != 0) 
+									Mix_PlayChannel(-1, wav1, 0);
+								if((core->portOut[1] & 0x2) != 0)
+									Mix_PlayChannel(-1, wav2, 0);
+								if((core->portOut[1] & 0x4) != 0)
+									Mix_PlayChannel(-1, wav3, 0);
+								if((core->portOut[1] & 0x8) != 0)
+									Mix_PlayChannel(-1, wav4, 0);
+								if((core->portOut[1] & 0x10) != 0)
+									Mix_PlayChannel(-1, wav5, 0);
+							}
 						break;
+						case 5: 
+							core->soundB = (core->portOut[3] >> 5) & 0x1;
+							if(core->soundB) {
+								if((core->portOut[3] & 0x1) != 0)
+									Mix_PlayChannel(-1, wav6, 0);
+								if((core->portOut[3] & 0x2) != 0)
+									Mix_PlayChannel(-1, wav7, 0);
+								if((core->portOut[3] & 0x4) != 0)
+									Mix_PlayChannel(-1, wav8, 0);
+								if((core->portOut[3] & 0x8) != 0)
+									Mix_PlayChannel(-1, wav9, 0);
+								if((core->portOut[3] & 0x10) != 0)
+									Mix_PlayChannel(-1, wav10, 0);
+							}
+						break;
+
+						case 6: break; //writes A to this port, debug thing?
+						default: cout << +core->loc << endl; break;
 					}
 				}
 
@@ -112,7 +150,7 @@ int main(int argc, char* args[]) {
 
 				cycCount += core->cycles - core->cycBefore;
 				if(core->cycles >= HALFFRAME) {
-					if(core->interrupt) {
+					if(core->interruptB) {
 						core->pc -= 3;
 						uint16_t pctmp = core->pc;
 						uint8_t optmp = core->memory[pctmp];
@@ -133,9 +171,19 @@ int main(int argc, char* args[]) {
 		}
 	}
 
-	if(core->debug)
+	if(core->debugB)
 		fclose(core->log); 
 
+	Mix_FreeChunk(wav1);
+	Mix_FreeChunk(wav2);
+	Mix_FreeChunk(wav3);
+	Mix_FreeChunk(wav4);
+	Mix_FreeChunk(wav5);
+	Mix_FreeChunk(wav6);
+	Mix_FreeChunk(wav7);
+	Mix_FreeChunk(wav8);
+	Mix_FreeChunk(wav9);
+	Mix_FreeChunk(wav10);
 	SDL_DestroyTexture(texture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window); 
