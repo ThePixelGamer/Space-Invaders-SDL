@@ -10,10 +10,10 @@
 
 int cyclesTable[256] = {
 //  0   1   2   3   4   5   6  7  8   9   a   b   c   d  e  f 
-	4, 10,  7,  5,  5,  5,  7, 4, 4, 10,  7,  5,  5,  5, 7, 4,  //0
-	4, 10,  7,  5,  5,  5,  7, 4, 4, 10,  7,  5,  5,  5, 7, 4,  //1
-	4, 10, 16,  5,  5,  5,  7, 4, 4, 10, 16,  5,  5,  5, 7, 4,  //2
-	4, 10, 13,  5,  5,  5, 10, 4, 4, 10, 13,  5,  5,  5, 7, 4,  //3
+	4, 10,  7,  5,  5,  5,  7, 4, 4, 10,  7,  5,  5,  5, 7, 4, //0
+	4, 10,  7,  5,  5,  5,  7, 4, 4, 10,  7,  5,  5,  5, 7, 4, //1
+	4, 10, 16,  5,  5,  5,  7, 4, 4, 10, 16,  5,  5,  5, 7, 4, //2
+	4, 10, 13,  5,  5,  5, 10, 4, 4, 10, 13,  5,  5,  5, 7, 4, //3
 	5,  5,  5,  5,  5,  5,  7, 5, 5,  5,  5,  5,  5,  5, 7, 5, //4
 	5,  5,  5,  5,  5,  5,  7, 5, 5,  5,  5,  5,  5,  5, 7, 5, //5
 	5,  5,  5,  5,  5,  5,  7, 5, 5,  5,  5,  5,  5,  5, 7, 5, //6
@@ -22,13 +22,33 @@ int cyclesTable[256] = {
 	4,  4,  4,  4,  4,  4,  7, 4, 4,  4,  4,  4,  4,  4, 7, 4, //9
 	4,  4,  4,  4,  4,  4,  7, 4, 4,  4,  4,  4,  4,  4, 7, 4, //a
 	4,  4,  4,  4,  4,  4,  7, 4, 4,  4,  4,  4,  4,  4, 7, 4, //b
-	5, 10, 10, 10, 11, 11,  7, 0, 5,  4, 10,  4, 11, 11, 7, 0,  //c
-	5, 10, 10, 10, 11, 11,  7, 0, 5,  4, 10, 10, 11,  4, 7, 0,  //d
-	5, 10, 10, 18, 11, 11,  7, 0, 5,  5, 10,  4, 11,  4, 7, 0,  //e
-	5, 10, 10,  4, 11, 11,  7, 0, 5,  5, 10,  4, 11,  4, 7, 0   //f
+	5, 10, 10, 10, 11, 11,  7, 5, 5,  4, 10,  4, 11, 11, 7, 5, //c
+	5, 10, 10, 10, 11, 11,  7, 5, 5,  4, 10, 10, 11,  4, 7, 5, //d
+	5, 10, 10, 18, 11, 11,  7, 5, 5,  5, 10,  4, 11,  4, 7, 5, //e
+	5, 10, 10,  4, 11, 11,  7, 5, 5,  5, 10,  4, 11,  4, 7, 5  //f
 };
 
-constexpr void (si8080::*si8080::opcodes[256])();
+int pcTable[256] = {
+//  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f 
+	1, 3, 1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 1, 1, 2, 1, //0
+	0, 3, 1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 1, 1, 2, 1, //1
+	0, 3, 3, 1, 1, 1, 2, 1, 0, 1, 3, 1, 1, 1, 2, 1, //2
+	0, 3, 3, 1, 1, 1, 2, 1, 0, 1, 3, 1, 1, 1, 2, 1, //3
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //4
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //5
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //6
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //7
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //8
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //9
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //a
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //b
+	0, 1, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, //c
+	0, 1, 0, 2, 0, 1, 2, 0, 0, 0, 0, 2, 0, 0, 2, 0, //d
+	0, 1, 0, 1, 0, 1, 2, 0, 0, 0, 0, 1, 0, 0, 2, 0, //e
+	0, 1, 0, 1, 0, 1, 2, 0, 0, 1, 0, 1, 0, 0, 2, 0  //f
+};
+
+constexpr void (si8080::*si8080::opcodeTable[256])();
 
 void si8080::emulateCycle() {
 	opcode = memory[pc];
@@ -39,11 +59,12 @@ void si8080::emulateCycle() {
 	if(debug)
 		fprintf(log, "PC:%04X OP:%02X ", pc, opcode);
 	
-	(this->*opcodes[opcode])();
+	(this->*opcodeTable[opcode])();
 	cycles += cyclesTable[opcode];
+	pc += pcTable[opcode];
 
 	if(debug)
-		fprintf(log, "SP:%04X BC:%04X DE:%04X HL:%04X A:%02X Cy:%i AC:%i S:%i Z:%i P:%i\n",  sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p);
+		fprintf(log, "SP:%04X BC:%04X DE:%04X HL:%04X A:%02X Cy:%i AC:%i S:%i Z:%i P:%i Cyc:%i\n",  sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p, cycles);
 }
 
 void si8080::nop() {}
@@ -58,8 +79,6 @@ void si8080::lxi() {
 		registers[reg+1] = loc & 0xff;
 		registers[reg] = (loc >> 8) & 0xff;
 	}
-
-	pc += 3;
 } 
 
 void si8080::stax() {
@@ -107,8 +126,6 @@ void si8080::mvi() {
 		changeM(memory[pc+1]);
 	else 
 		registers[reg] = memory[pc+1];
-
-	pc += 1;
 } 
 
 void si8080::rlc() {
@@ -170,7 +187,6 @@ void si8080::shld() {
 	changeM(registers[L]);
 	loc += 1;
 	changeM(registers[H]);
-	pc += 2;
 }
 
 void si8080::daa() {
@@ -189,8 +205,6 @@ void si8080::lhld() {
 	loc = (memory[pc+2] << 8) + memory[pc+1];
 	registers[L] = memory[loc];
 	registers[H] = memory[loc+1];
-
-	pc += 2;
 }
 
 void si8080::cma() {
@@ -200,8 +214,6 @@ void si8080::cma() {
 void si8080::sta() {
 	loc = (memory[pc+2] << 8) + memory[pc+1];
 	changeM(registers[A]);
-
-	pc += 2;
 }
 
 void si8080::stc() {
@@ -211,8 +223,6 @@ void si8080::stc() {
 void si8080::lda() {
 	loc = (memory[pc+2] << 8) + memory[pc+1];
 	registers[A] = memory[loc];
-	
-	pc += 2;
 }
 
 void si8080::cmc() {
@@ -238,10 +248,9 @@ void si8080::hlt() {
 void si8080::math() {
 	uint8_t data = registers[opcode & 0x7];
 
-	if((opcode & 0xc0) == 0xc0) {
+	if((opcode & 0xc0) == 0xc0)
 		data = memory[pc+1];
-		pc += 1;
-	} else if((opcode & 0x7) == 0x6)
+	else if((opcode & 0x7) == 0x6)
 		data = memory[loc];
 
 	switch((opcode >> 3) & 0x7) {
@@ -266,6 +275,8 @@ void si8080::math() {
 void si8080::retC() { //11 cond(3) 000
 	if(checkCond())
 		ret();
+	else
+		pc += 1;
 }
 
 void si8080::pop() { //11 rp(2) 0001
@@ -321,9 +332,8 @@ void si8080::push() { //11 rp(2) 0101
 
 void si8080::rst() { //11 exp(3) 111
 	call();
-	pc = opcode & 0x38;
+	pc = (opcode & 0x38);
 
-	cycles += 5;
 	hltB = false;
 	interrupt = false;
 }
@@ -345,13 +355,11 @@ void si8080::call() {
 void si8080::out() {
 	loc = memory[pc+1];
 	portOut[loc-2] = registers[A]; //2->0
-	pc += 2;
 }
 
 void si8080::in() {
 	loc = memory[pc+1];
 	registers[A] = portIn[loc-1]; //1->0
-	pc += 2;
 }
 
 void si8080::xthl() {
@@ -483,12 +491,14 @@ void si8080::load(const char* filename) {
 				fputs("Reading error", stderr); 
 			} else {
 				uint32_t tmp = romSize + 0x2000;
-				for(uint32_t i = 0; i < tmp; i++)
+				for(uint32_t i = 0; i < romSize; i++)
+					memory.push_back(buffer[i]);
+				for(uint32_t i = romSize; i < tmp; i++)
 					memory.push_back(0);	
 
 				pc = sp = cycles = cycBefore = 0;
 				interrupt = hltB = false;
-				debug = false;
+				debug = true;
 
 				fclose(rom);
 				free(buffer);

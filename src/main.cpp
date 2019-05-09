@@ -15,7 +15,8 @@ using ms = duration<float, milli>;
 
 #define SCREEN_HEIGHT 256
 #define SCREEN_WIDTH 224
-#define CLOCK 2000000
+#define FRAME 33323 //2000000 / 60 - 11 (for rst)
+#define HALFFRAME 16656 //2000000 / 120 - 11 (for rst)
 
 SDL_Window*		window;
 SDL_Renderer*	renderer;
@@ -52,7 +53,7 @@ int main(int argc, char* args[]) {
 			SDL_SetWindowTitle(window, ("fps:" + to_string(60/FPS.count()) + " Invaders").c_str());
 
 			uint32_t cycCount = 0;
-			while(cycCount <= CLOCK / 60) {
+			while(cycCount <= FRAME) {
 				while(SDL_PollEvent(&event)) { //user input
 					switch(event.type) {
 						case SDL_KEYDOWN:
@@ -104,21 +105,23 @@ int main(int argc, char* args[]) {
 					}
 				}
 
-				core->cycBefore = core->cycles;
-
 				if(core->hltB)
 					core->cycles += 4;
 				else
 					core->emulateCycle();
 
 				cycCount += core->cycles - core->cycBefore;
-				if(core->cycles >= (CLOCK / 120)) {
+				if(core->cycles >= HALFFRAME) {
 					if(core->interrupt) {
 						core->pc -= 3;
-						(vInterrupt) ? (core->*si8080::opcodes[0xcf])() : (core->*si8080::opcodes[0xd7])();
+						uint16_t pctmp = core->pc;
+						uint8_t optmp = core->memory[pctmp];
+						core->memory[pctmp] = ((vInterrupt) ? 0xcf : 0xd7);
+						core->emulateCycle();
+						core->memory[pctmp] = optmp;
 					}
 					
-					core->cycles -= (CLOCK / 120);
+					core->cycles -= HALFFRAME;
 					vInterrupt = !vInterrupt;
 				}
 			}
