@@ -74,21 +74,21 @@ public:
     
     static constexpr void (si8080::*opcodes[256])() = {
     //	   0     1     2     3      4     5     6     7     8     9      a    b      c     d     e     f 
-        nop,  lxi, stax,  inx,   inr,  dcr,  mvi,  rlc,  nop,  dad,  ldax, dcx,   inr,  dcr,  mvi,  rrc,  //0
-        nop,  lxi, stax,  inx,   inr,  dcr,  mvi,  ral,  nop,  dad,  ldax, dcx,   inr,  dcr,  mvi,  rar,  //1
-        nop,  lxi, shld,  inx,   inr,  dcr,  mvi,  daa,  nop,  dad,  lhld, dcx,   inr,  dcr,  mvi,  cma,  //2
-        nop,  lxi,  sta,  inx,   inr,  dcr,  mvi,  stc,  nop,  dad,  lda,  dcx,   inr,  dcr,  mvi,  cmc,  //3
-        mov,  mov,  mov,  mov,   mov,  mov,  mov,  mov,  mov,  mov,  mov,  mov,   mov,  mov,  mov,  mov,  //4
-        mov,  mov,  mov,  mov,   mov,  mov,  mov,  mov,  mov,  mov,  mov,  mov,   mov,  mov,  mov,  mov,  //5
-        mov,  mov,  mov,  mov,   mov,  mov,  mov,  mov,  mov,  mov,  mov,  mov,   mov,  mov,  mov,  mov,  //6
-        mov,  mov,  mov,  mov,   mov,  mov,  mov,  mov,  mov,  mov,  mov,  mov,   mov,  mov,  mov,  mov,  //7
-        math, math, math, math,  math, math, math, math, math, math, math, math,  math, math, math, math, //8
-        math, math, math, math,  math, math, math, math, math, math, math, math,  math, math, math, math, //9
-        math, math, math, math,  math, math, math, math, math, math, math, math,  math, math, math, math, //a
-        math, math, math, math,  math, math, math, math, math, math, math, math,  math, math, math, math, //b
-        retC,  pop, jmpC,  jmp, callC, push, math,  rst, retC,  ret, jmpC,  nop, callC, call, math,  rst,  //c
-        retC,  pop, jmpC,  out, callC, push, math,  rst, retC,  nop, jmpC,   in, callC,  nop, math,  rst,  //d
-        retC,  pop, jmpC, xthl, callC, push, math,  rst, retC, pchl, jmpC, xchg, callC,  nop, math,  rst,  //e
-        retC,  pop, jmpC,   di, callC, push, math,  rst, retC, sphl, jmpC,   ei, callC,  nop, math,  rst   //f
+        &si8080::nop,  &si8080::lxi, &si8080::stax,  &si8080::inx,   &si8080::inr,  &si8080::dcr,  &si8080::mvi,  &si8080::rlc,  &si8080::nop,  &si8080::dad,  &si8080::ldax, &si8080::dcx,   &si8080::inr,  &si8080::dcr,  &si8080::mvi,  &si8080::rrc,  //0
+        &si8080::nop,  &si8080::lxi, &si8080::stax,  &si8080::inx,   &si8080::inr,  &si8080::dcr,  &si8080::mvi,  &si8080::ral,  &si8080::nop,  &si8080::dad,  &si8080::ldax, &si8080::dcx,   &si8080::inr,  &si8080::dcr,  &si8080::mvi,  &si8080::rar,  //1
+        &si8080::nop,  &si8080::lxi, &si8080::shld,  &si8080::inx,   &si8080::inr,  &si8080::dcr,  &si8080::mvi,  &si8080::daa,  &si8080::nop,  &si8080::dad,  &si8080::lhld, &si8080::dcx,   &si8080::inr,  &si8080::dcr,  &si8080::mvi,  &si8080::cma,  //2
+        &si8080::nop,  &si8080::lxi, &si8080:: sta,  &si8080::inx,   &si8080::inr,  &si8080::dcr,  &si8080::mvi,  &si8080::stc,  &si8080::nop,  &si8080::dad,  &si8080::lda,  &si8080::dcx,   &si8080::inr,  &si8080::dcr,  &si8080::mvi,  &si8080::cmc,  //3
+        &si8080::mov,  &si8080::mov, &si8080:: mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  //4
+        &si8080::mov,  &si8080::mov, &si8080:: mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  //5
+        &si8080::mov,  &si8080::mov, &si8080:: mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  //6
+        &si8080::mov,  &si8080::mov, &si8080:: mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  //7
+        &si8080::math, &si8080::math,&si8080:: math, &si8080::math,  &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math,  &si8080::math, &si8080::math, &si8080::math, &si8080::math, //8
+        &si8080::math, &si8080::math,&si8080:: math, &si8080::math,  &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math,  &si8080::math, &si8080::math, &si8080::math, &si8080::math, //9
+        &si8080::math, &si8080::math,&si8080:: math, &si8080::math,  &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math,  &si8080::math, &si8080::math, &si8080::math, &si8080::math, //a
+        &si8080::math, &si8080::math,&si8080:: math, &si8080::math,  &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math, &si8080::math,  &si8080::math, &si8080::math, &si8080::math, &si8080::math, //b
+        &si8080::retC, &si8080:: pop,&si8080:: jmpC, &si8080:: jmp, &si8080::callC, &si8080::push, &si8080::math, &si8080:: rst, &si8080::retC, &si8080:: ret, &si8080::jmpC, &si8080:: nop, &si8080::callC, &si8080::call, &si8080::math, &si8080:: rst,  //c
+        &si8080::retC, &si8080:: pop,&si8080:: jmpC, &si8080:: out, &si8080::callC, &si8080::push, &si8080::math, &si8080:: rst, &si8080::retC, &si8080:: nop, &si8080::jmpC, &si8080::  in, &si8080::callC, &si8080:: nop, &si8080::math, &si8080:: rst,  //d
+        &si8080::retC, &si8080:: pop,&si8080:: jmpC, &si8080::xthl, &si8080::callC, &si8080::push, &si8080::math, &si8080:: rst, &si8080::retC, &si8080::pchl, &si8080::jmpC, &si8080::xchg, &si8080::callC, &si8080:: nop, &si8080::math, &si8080:: rst,  //e
+        &si8080::retC, &si8080:: pop,&si8080:: jmpC, &si8080::  di, &si8080::callC, &si8080::push, &si8080::math, &si8080:: rst, &si8080::retC, &si8080::sphl, &si8080::jmpC, &si8080::  ei, &si8080::callC, &si8080:: nop, &si8080::math, &si8080:: rst   //f
     };
 };

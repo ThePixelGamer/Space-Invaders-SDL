@@ -28,6 +28,8 @@ int cyclesTable[256] = {
 	5, 10, 10,  4, 11, 11,  7, 0, 5,  5, 10,  4, 11,  4, 7, 0   //f
 };
 
+constexpr void (si8080::*si8080::opcodes[256])();
+
 void si8080::emulateCycle() {
 	opcode = memory[pc];
 		
