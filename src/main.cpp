@@ -106,16 +106,18 @@ int main(int argc, char* args[]) {
 
 				core->cycBefore = core->cycles;
 
-				if(!core->hlt)
+				if(core->hltB)
+					core->cycles += 4;
+				else
 					core->emulateCycle();
 
 				cycCount += core->cycles - core->cycBefore;
 				if(core->cycles >= (CLOCK / 120)) {
 					if(core->interrupt) {
-						core->opcode = (vInterrupt) ? 0xcf : 0xd7;
-						core->emulateCycle();
-						core->opcode = 0; //lazy hack to "fix" the if statement in emulateCycle
+						core->pc -= 3;
+						(vInterrupt) ? (core->*si8080::opcodes[0xcf])() : (core->*si8080::opcodes[0xd7])();
 					}
+					
 					core->cycles -= (CLOCK / 120);
 					vInterrupt = !vInterrupt;
 				}
@@ -130,7 +132,7 @@ int main(int argc, char* args[]) {
 
 	if(core->debug)
 		fclose(core->log); 
-		
+
 	SDL_DestroyTexture(texture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window); 

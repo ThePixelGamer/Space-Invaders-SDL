@@ -8,9 +8,28 @@
 #define H 0x4
 #define L 0x5
 
+int cyclesTable[256] = {
+//  0   1   2   3   4   5   6  7  8   9   a   b   c   d  e  f 
+	4, 10,  7,  5,  5,  5,  7, 4, 4, 10,  7,  5,  5,  5, 7, 4,  //0
+	4, 10,  7,  5,  5,  5,  7, 4, 4, 10,  7,  5,  5,  5, 7, 4,  //1
+	4, 10, 16,  5,  5,  5,  7, 4, 4, 10, 16,  5,  5,  5, 7, 4,  //2
+	4, 10, 13,  5,  5,  5, 10, 4, 4, 10, 13,  5,  5,  5, 7, 4,  //3
+	5,  5,  5,  5,  5,  5,  7, 5, 5,  5,  5,  5,  5,  5, 7, 5, //4
+	5,  5,  5,  5,  5,  5,  7, 5, 5,  5,  5,  5,  5,  5, 7, 5, //5
+	5,  5,  5,  5,  5,  5,  7, 5, 5,  5,  5,  5,  5,  5, 7, 5, //6
+	7,  7,  7,  7,  7,  7,  7, 7, 5,  5,  5,  5,  5,  5, 7, 5, //7
+	4,  4,  4,  4,  4,  4,  7, 4, 4,  4,  4,  4,  4,  4, 7, 4, //8
+	4,  4,  4,  4,  4,  4,  7, 4, 4,  4,  4,  4,  4,  4, 7, 4, //9
+	4,  4,  4,  4,  4,  4,  7, 4, 4,  4,  4,  4,  4,  4, 7, 4, //a
+	4,  4,  4,  4,  4,  4,  7, 4, 4,  4,  4,  4,  4,  4, 7, 4, //b
+	5, 10, 10, 10, 11, 11,  7, 0, 5,  4, 10,  4, 11, 11, 7, 0,  //c
+	5, 10, 10, 10, 11, 11,  7, 0, 5,  4, 10, 10, 11,  4, 7, 0,  //d
+	5, 10, 10, 18, 11, 11,  7, 0, 5,  5, 10,  4, 11,  4, 7, 0,  //e
+	5, 10, 10,  4, 11, 11,  7, 0, 5,  5, 10,  4, 11,  4, 7, 0   //f
+};
+
 void si8080::emulateCycle() {
-	if(!(((opcode & 0xc0) == 0xc0) && ((opcode & 0xf) == 0xf || (opcode & 0xf) == 0x7)))
-		opcode = memory[pc];
+	opcode = memory[pc];
 		
 	loc = (registers[H] << 8) + registers[L];
 	cycBefore = cycles;
@@ -18,99 +37,14 @@ void si8080::emulateCycle() {
 	if(debug)
 		fprintf(log, "PC:%04X OP:%02X ", pc, opcode);
 	
-	switch(opcode) {
-		case 0x0:															break; //0x00-0x3f
-		case 0x1:	case 0x11:	case 0x21:	case 0x31:	lxi();				break;
-		case 0x2:	case 0x12:							stax(); 			break; 
-								case 0x22:				shld();				break;
-											case 0x32:	sta();				break;
-		case 0x3:	case 0x13:	case 0x23:	case 0x33:	inx();				break;
-		case 0x4:	case 0x14:	case 0x24:	case 0x34:	inr();				break; 
-		case 0x5:	case 0x15:	case 0x25:	case 0x35:	dcr();				break;
-		case 0x6:	case 0x16:	case 0x26:	case 0x36:	mvi();				break;
-		case 0x7:										rlc();				break;
-					case 0x17:							ral();				break;
-								case 0x27:				daa();				break;
-											case 0x37:	stc();				break;
-		case 0x9:	case 0x19:	case 0x29:	case 0x39: 	dad();				break;
-		case 0xa:	case 0x1a:							ldax(); 			break;
-								case 0x2a:				lhld();				break;
-											case 0x3a:	lda();				break;
-		case 0xb:	case 0x1b:	case 0x2b:	case 0x3b:	dcx();				break;
-		case 0xc:	case 0x1c:	case 0x2c:	case 0x3c:	inr();				break;
-		case 0xd:	case 0x1d:	case 0x2d:	case 0x3d:	dcr();				break;
-		case 0xe:	case 0x1e:	case 0x2e:	case 0x3e:	mvi();				break;
-		case 0xf:										rrc();				break;
-					case 0x1f:							rar();				break;
-								case 0x2f:				cma();				break;
-											case 0x3f:	cmc();				break;
-		case 0x40:	case 0x50:	case 0x60:	case 0x70: //0x40-0x7f
-		case 0x41:	case 0x51:	case 0x61:	case 0x71:
-		case 0x42:	case 0x52:	case 0x62:	case 0x72:
-		case 0x43:	case 0x53:	case 0x63:	case 0x73:
-		case 0x44:	case 0x54:	case 0x64:	case 0x74:
-		case 0x45:	case 0x55:	case 0x65:	case 0x75:
-		case 0x46:	case 0x56:	case 0x66:
-		case 0x47:	case 0x57:	case 0x67:	case 0x77:
-		case 0x48:	case 0x58:	case 0x68:	case 0x78:
-		case 0x49:	case 0x59:	case 0x69:	case 0x79:
-		case 0x4a:	case 0x5a:	case 0x6a:	case 0x7a:
-		case 0x4b:	case 0x5b:	case 0x6b:	case 0x7b:
-		case 0x4c:	case 0x5c:	case 0x6c:	case 0x7c:
-		case 0x4d:	case 0x5d:	case 0x6d:	case 0x7d:
-		case 0x4e:	case 0x5e:	case 0x6e:	case 0x7e:
-		case 0x4f:	case 0x5f:	case 0x6f:	case 0x7f:	mov();				break;
-											case 0x76: 	hlt = true;			break;
-		case 0x80:	case 0x90:	case 0xa0:	case 0xb0: //0x80-0xbf
-		case 0x81:	case 0x91:	case 0xa1:	case 0xb1:
-		case 0x82:	case 0x92:	case 0xa2:	case 0xb2:
-		case 0x83:	case 0x93:	case 0xa3:	case 0xb3:
-		case 0x84:	case 0x94:	case 0xa4:	case 0xb4:
-		case 0x85:	case 0x95:	case 0xa5:	case 0xb5:
-		case 0x86:	case 0x96:	case 0xa6:	case 0xb6:
-		case 0x87:	case 0x97:	case 0xa7:	case 0xb7:
-		case 0x88:	case 0x98:	case 0xa8:	case 0xb8:
-		case 0x89:	case 0x99:	case 0xa9:	case 0xb9:
-		case 0x8a:	case 0x9a:	case 0xaa:	case 0xba:
-		case 0x8b:	case 0x9b:	case 0xab:	case 0xbb:
-		case 0x8c:	case 0x9c:	case 0xac:	case 0xbc:
-		case 0x8d:	case 0x9d:	case 0xad:	case 0xbd:
-		case 0x8e:	case 0x9e:	case 0xae:	case 0xbe:
-		case 0x8f:	case 0x9f:	case 0xaf:	case 0xbf:	math();				break;
-		case 0xc0:	case 0xd0:	case 0xe0:	case 0xf0:	retC();				break; //0xc0-0xff
-		case 0xc1:	case 0xd1:	case 0xe1:	case 0xf1:	pop();				break;
-		case 0xc2:	case 0xd2:	case 0xe2:	case 0xf2:	jmpC();				break;
-		case 0xc3:										jmp();				break;
-					case 0xd3:							out();				break;
-								case 0xe3:				xthl();				break;
-											case 0xf3:	interrupt = false;	break;
-		case 0xc4:	case 0xd4:	case 0xe4:	case 0xf4:	callC();			break;
-		case 0xc5:	case 0xd5:	case 0xe5:	case 0xf5:	push();				break;
-		case 0xc6:	case 0xd6:	case 0xe6:	case 0xf6:	math();				break;
-		case 0xc7:	case 0xd7:	case 0xe7:	case 0xf7:	rst();				break;
-		case 0xc8:	case 0xd8:	case 0xe8:	case 0xf8:	retC();				break;
-		case 0xc9:										ret();				break;
-								case 0xe9:				pc = loc - 1;		break;
-											case 0xf9:	sp = loc;			break;
-		case 0xca:	case 0xda:	case 0xea:	case 0xfa:	jmpC();				break;
-					case 0xdb:							in();				break;
-								case 0xeb:				xchg();				break;
-											case 0xfb:	interrupt = true;	break;
-		case 0xcc:	case 0xdc:	case 0xec:	case 0xfc:	callC();			break;
-		case 0xcd:										call();				break;
-		case 0xce:	case 0xde:	case 0xee:	case 0xfe:	math();				break;
-		case 0xcf:	case 0xdf:	case 0xef:	case 0xff:	rst();				break;
+	(this->*opcodes[opcode])();
+	cycles += cyclesTable[opcode];
 
-		default: cout << hex << +opcode << endl; break;
-	}
-
-	if(debug) {
+	if(debug)
 		fprintf(log, "SP:%04X BC:%04X DE:%04X HL:%04X A:%02X Cy:%i AC:%i S:%i Z:%i P:%i\n",  sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p);
-	} 
-
-	cycles += 4;
-	pc++;
 }
+
+void si8080::nop() {}
 
 void si8080::lxi() {
 	uint8_t reg = (opcode >> 3) & 0x6;
@@ -123,16 +57,13 @@ void si8080::lxi() {
 		registers[reg] = (loc >> 8) & 0xff;
 	}
 
-	pc += 2;
-	cycles += 6;
+	pc += 3;
 } 
 
 void si8080::stax() {
 	uint8_t reg = (opcode >> 3) & 0x2;
 	loc = (registers[reg] << 8) + registers[reg+1];
 	changeM(registers[A]);
-	
-	cycles += 3;
 }
 
 void si8080::inx() {
@@ -145,263 +76,43 @@ void si8080::inx() {
 		registers[reg+1] = loc & 0xff;
 		registers[reg] = (loc >> 8) & 0xff;
 	}
-	
-	cycles += 1;
-}
-
-void si8080::mvi() {
-	uint8_t reg = (opcode >> 3) & 0x7;
-	loc = ((uint16_t) registers[H] << 8) + registers[L];
-	if(reg == 0x6) {
-		changeM(memory[pc+1]);
-		cycles += 3;
-	} 
-	else 
-		registers[reg] = memory[pc+1];
-
-	pc += 1;
-	cycles += 3;
-} 
-
-void si8080::ldax() {
-	uint8_t reg = (opcode >> 3) & 0x2;
-
-	loc = (registers[reg] << 8) + registers[reg+1];
-	registers[A] = memory[loc];
-	
-	cycles += 3;
-}
-
-void si8080::dcx() {
-	uint8_t reg = (opcode >> 3) & 0x6;
-	if(reg == 0x6) {
-		sp = (uint16_t)(sp - 1);
-	}
-	else {
-		loc = ((registers[reg] << 8) + registers[reg+1]) - 1;
-		registers[reg+1] = loc & 0xff;
-		registers[reg] = (loc >> 8) & 0xff;
-	}
-
-	cycles += 1;
-}
-
-void si8080::shld() {
-	loc = (memory[pc+2] << 8) + memory[pc+1];
-	changeM(registers[L]);
-	loc += 1;
-	changeM(registers[H]);
-	pc += 2;
-	cycles += 12;
-}
-
-void si8080::lhld() {
-	loc = (memory[pc+2] << 8) + memory[pc+1];
-	registers[L] = memory[loc];
-	registers[H] = memory[loc+1];
-
-	pc += 2;
-	cycles += 12;
-}
-
-void si8080::sta() {
-	loc = (memory[pc+2] << 8) + memory[pc+1];
-	changeM(registers[A]);
-
-	pc += 2;
-	cycles += 9;
-}
-
-void si8080::lda() {
-	loc = (memory[pc+2] << 8) + memory[pc+1];
-	registers[A] = memory[loc];
-	
-	pc += 2;
-	cycles += 9;
-}
-
-void si8080::mov() {
-	uint8_t dst = (opcode >> 3) & 0x7;
-	uint8_t src = opcode & 0x7;
-
-	if(dst == 0x6) {
-		changeM(registers[src]);
-		cycles += 2;
-	}
-	else if(src == 0x6) {
-		registers[dst] = memory[loc];
-		cycles += 2;
-	}
-	else {
-		registers[dst] = registers[src];
-	}
-
-	cycles += 1;
-}
-
-void si8080::retC() { //11 cond(3) 000
-	if(checkCond()) {
-		ret();
-	}
-
-	cycles += 1;
-}
-
-void si8080::jmpC() { //11 cond(3) 010
-	if(checkCond()) {
-		jmp();
-	}
-	else {
-		pc += 2;
-	}
-}
-
-void si8080::callC() { //11 cond(3) 100
-	if(checkCond()) {
-		call();
-	}
-	else {
-		cycles += 7;
-		pc += 2;
-	}
-}
-
-void si8080::ret() {
-	pc = (memory[sp+1] << 8) + memory[sp] - 1;
-	sp = (uint16_t)(sp + 2);
-	cycles += 6;
-}
-
-void si8080::jmp() {
-	pc = (memory[pc+2] << 8) + memory[pc+1] - 1;
-	cycles += 6;
-}
-
-void si8080::call() {
-	loc = (memory[pc+2] << 8) + memory[pc+1] - 1;
-	memory[sp-2] = (pc + 3) & 0xff;
-	memory[sp-1] = (pc + 3) >> 8;
-	sp = (uint16_t)(sp - 2);
-	pc = loc;
-	cycles += 13;
-}
-
-void si8080::pop() { //11 rp(2) 0001
-	uint8_t reg = (opcode >> 3) & 0x6;
-
-	if(reg == 0x6) {
-		uint8_t flags = memory[sp];
-		cy = flags & 0x1;
-		ac = (flags & 0x10) >> 4;
-		s  = (flags & 0x80) >> 7;
-		z  = (flags & 0x40) >> 6;
-		p  = (flags & 0x4) >> 2;
-		registers[A] = memory[sp+1];
-	}
-	else {
-		registers[reg+1] = memory[sp];
-		registers[reg] = memory[sp+1];
-	}
-
-	sp = (uint16_t)(sp + 2);
-	cycles += 6;
-}
-
-void si8080::push() { //11 rp(2) 0101
-	uint8_t reg = (opcode >> 3) & 0x6;
-
-	if(reg == 0x6) { //PSW
-		memory[sp-2] = (s << 7) + (z << 6) + (ac << 4) + (p << 2) + 0x2 + cy;
-		memory[sp-1] = registers[A];
-	}
-	else {
-		memory[sp-2] = registers[reg+1];
-		memory[sp-1] = registers[reg];
-	}
-
-	sp = (uint16_t)(sp - 2);
-	cycles += 7;
-}
-
-void si8080::rst() { //11 exp(3) 111
-	uint8_t reg = opcode & 0x38;
-	memory[sp-2] = pc & 0xff;
-	memory[sp-1] = pc >> 8;
-	sp = (uint16_t)(sp - 2);
-	pc = reg - 1;
-
-	cycles -= 4;
-	hlt = false;
-	interrupt = false;
-}
-
-void si8080::out() {
-	loc = memory[pc+1];
-	portOut[loc-2] = registers[A]; //2->0
-	pc += 1;
-	cycles += 6;
-}
-
-void si8080::in() {
-	loc = memory[pc+1];
-	registers[A] = portIn[loc-1]; //1->0
-	pc += 1;
-	cycles += 6; 
-}
-
-void si8080::xthl() {
-	uint8_t tmp2 = memory[sp];
-	uint8_t tmp1 = memory[sp+1];
-
-	//replace 2 bytes on stack with H+L
-	loc = sp;
-	changeM(registers[L]);
-	loc++;
-	changeM(registers[H]);
-
-	//replace H+L with 2 bytes from stack
-	registers[L] = tmp2;
-	registers[H] = tmp1;
-
-	cycles += 14;
-}
-
-void si8080::xchg() {
-	uint8_t tmp2 = registers[E];
-	uint8_t tmp1 = registers[D];
-	registers[E] = registers[L];
-	registers[D] = registers[H];
-	registers[L] = tmp2;
-	registers[H] = tmp1;
 }
 
 void si8080::inr() {
 	uint8_t reg = (opcode >> 3) & 0x7;
 	loc = ((uint16_t) registers[H] << 8) + registers[L];
 
-	if(reg == 0x6) {
+	if(reg == 0x6)
 		changeM(setCond(memory[loc] + 1, memory[loc], 1));
-		cycles += 5;
-	} 
 	else
 		registers[reg] = setCond(registers[reg] + 1, registers[reg], 1);
-
-	cycles += 1;
 } 
 
 void si8080::dcr() {
 	uint8_t reg = (opcode >> 3) & 0x7;
 	loc = ((uint16_t) registers[H] << 8) + registers[L];
 
-	if(reg == 0x6) {
-		changeM(setCond((memory[loc] - 1) & 0xFF, memory[loc], 1));
-		cycles += 5;
-	} 
+	if(reg == 0x6)
+		changeM(setCond((memory[loc] - 1) & 0xFF, memory[loc], 1)); 
 	else
 		registers[reg] = setCond((registers[reg] - 1) & 0xFF, registers[reg], 1);
-
-	cycles += 1;
 } 
+
+void si8080::mvi() {
+	uint8_t reg = (opcode >> 3) & 0x7;
+	loc = ((uint16_t) registers[H] << 8) + registers[L];
+	if(reg == 0x6)
+		changeM(memory[pc+1]);
+	else 
+		registers[reg] = memory[pc+1];
+
+	pc += 1;
+} 
+
+void si8080::rlc() {
+	cy = (((registers[A] & 0x80) == 0x80) ? 1 : 0);
+	registers[A] = (registers[A] << 1) + cy; 
+}
 
 void si8080::dad() {
 	uint8_t reg = (opcode >> 3) & 0x6;
@@ -417,12 +128,24 @@ void si8080::dad() {
 	registers[L] = tmp & 0xff;
 	registers[H] = (tmp >> 8) & 0xff;
 	cy = (tmp > 0xffff);
-	cycles += 6;
 } 
 
-void si8080::rlc() {
-	cy = (((registers[A] & 0x80) == 0x80) ? 1 : 0);
-	registers[A] = (registers[A] << 1) + cy; 
+void si8080::ldax() {
+	uint8_t reg = (opcode >> 3) & 0x2;
+
+	loc = (registers[reg] << 8) + registers[reg+1];
+	registers[A] = memory[loc];
+}
+
+void si8080::dcx() {
+	uint8_t reg = (opcode >> 3) & 0x6;
+	if(reg == 0x6) 
+		sp = (uint16_t)(sp - 1);
+	else {
+		loc = ((registers[reg] << 8) + registers[reg+1]) - 1;
+		registers[reg+1] = loc & 0xff;
+		registers[reg] = (loc >> 8) & 0xff;
+	}
 }
 
 void si8080::rrc() {
@@ -440,6 +163,14 @@ void si8080::rar() {
 	cy = (((registers[A] & 0x1) == 0x1) ? 1 : 0);
 }
 
+void si8080::shld() {
+	loc = (memory[pc+2] << 8) + memory[pc+1];
+	changeM(registers[L]);
+	loc += 1;
+	changeM(registers[H]);
+	pc += 2;
+}
+
 void si8080::daa() {
     uint8_t lsb = registers[A] & 0xf;
     uint8_t msb = registers[A] >> 4;
@@ -452,16 +183,54 @@ void si8080::daa() {
     }
 }
 
+void si8080::lhld() {
+	loc = (memory[pc+2] << 8) + memory[pc+1];
+	registers[L] = memory[loc];
+	registers[H] = memory[loc+1];
+
+	pc += 2;
+}
+
 void si8080::cma() {
 	registers[A] = (registers[A] == 1) ? 0 : 1;
+}
+
+void si8080::sta() {
+	loc = (memory[pc+2] << 8) + memory[pc+1];
+	changeM(registers[A]);
+
+	pc += 2;
 }
 
 void si8080::stc() {
 	cy = 1;
 }
 
+void si8080::lda() {
+	loc = (memory[pc+2] << 8) + memory[pc+1];
+	registers[A] = memory[loc];
+	
+	pc += 2;
+}
+
 void si8080::cmc() {
 	cy = (cy == 1) ? 0 : 1;
+}
+
+void si8080::mov() {
+	uint8_t dst = (opcode >> 3) & 0x7;
+	uint8_t src = opcode & 0x7;
+
+	if(dst == 0x6)
+		changeM(registers[src]);
+	else if(src == 0x6)
+		registers[dst] = memory[loc];
+	else
+		registers[dst] = registers[src];
+}
+
+void si8080::hlt() {
+	hltB = true;
 }
 
 void si8080::math() {
@@ -470,37 +239,157 @@ void si8080::math() {
 	if((opcode & 0xc0) == 0xc0) {
 		data = memory[pc+1];
 		pc += 1;
-		cycles += 3;
-	}
-	else if((opcode & 0x7) == 0x6) {
+	} else if((opcode & 0x7) == 0x6)
 		data = memory[loc];
-		cycles += 3;
-	}
 
 	switch((opcode >> 3) & 0x7) {
+		case 0x7: setCond(registers[A] - data, registers[A], data); break;
 		case 0x0: registers[A] = setCond(registers[A] + data, registers[A], data); break;
 		case 0x1: registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy)); break;
 		case 0x2: registers[A] = setCond(registers[A] - data, registers[A], data); break;
 		case 0x3: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy)); break;
-		case 0x4: {
-			registers[A] = setCond(registers[A] & data, 0, 0);
-			ac = ((registers[A] | data) & 0x8) != 0;
-			cy = 0;
-		} break;
-		case 0x5: {
-			registers[A] = setCond(registers[A] ^ data, 0, 0); 
-			ac = 0;
-			cy = 0;
-		} break;
-		case 0x6: {
-			registers[A] = setCond(registers[A] | data, 0, 0); 
-			ac = 0;
-			cy = 0;
-		} break; 
-		case 0x7: { //cmp and cpi
-			setCond(registers[A] - data, registers[A], data);
-		} break;
+		case 0x4: registers[A] = setCond(registers[A] & data, 0, 0);
+				  ac = ((registers[A] | data) & 0x8) != 0;
+				  cy = 0;
+		break;
+		case 0x5: registers[A] = setCond(registers[A] ^ data, 0, 0); 
+				  ac = cy = 0;
+		break;
+		case 0x6: registers[A] = setCond(registers[A] | data, 0, 0); 
+				  ac = cy = 0;
+		break; 
 	}
+}
+
+void si8080::retC() { //11 cond(3) 000
+	if(checkCond())
+		ret();
+}
+
+void si8080::pop() { //11 rp(2) 0001
+	uint8_t reg = (opcode >> 3) & 0x6;
+
+	if(reg == 0x6) {
+		uint8_t flags = memory[sp];
+		cy = flags & 0x1;
+		ac = (flags & 0x10) >> 4;
+		s  = (flags & 0x80) >> 7;
+		z  = (flags & 0x40) >> 6;
+		p  = (flags & 0x4) >> 2;
+		registers[A] = memory[sp+1];
+	} else {
+		registers[reg+1] = memory[sp];
+		registers[reg] = memory[sp+1];
+	}
+
+	sp += 2;
+}
+
+void si8080::jmpC() { //11 cond(3) 010
+	if(checkCond()) 
+		jmp();
+	else
+		pc += 3;
+}
+
+void si8080::jmp() {
+	pc = (memory[pc+2] << 8) + memory[pc+1];
+}
+
+void si8080::callC() { //11 cond(3) 100
+	if(checkCond())
+		call();
+	else
+		pc += 3;
+}
+
+void si8080::push() { //11 rp(2) 0101
+	uint8_t reg = (opcode >> 3) & 0x6;
+
+	if(reg == 0x6) { //PSW
+		memory[sp-2] = (s << 7) + (z << 6) + (ac << 4) + (p << 2) + 0x2 + cy;
+		memory[sp-1] = registers[A];
+	} else {
+		memory[sp-2] = registers[reg+1];
+		memory[sp-1] = registers[reg];
+	}
+
+	sp -= 2;
+}
+
+void si8080::rst() { //11 exp(3) 111
+	call();
+	pc = opcode & 0x38;
+
+	cycles += 5;
+	hltB = false;
+	interrupt = false;
+}
+
+void si8080::ret() {
+	pc = (memory[sp+1] << 8) + memory[sp];
+	sp += 2;
+	cycles += 6;
+}
+
+void si8080::call() {
+	memory[sp-2] = (pc + 3) & 0xff;
+	memory[sp-1] = (pc + 3) >> 8;
+	sp -= 2;
+	pc = (memory[pc+2] << 8) + memory[pc+1];
+	cycles += 6;
+}
+
+void si8080::out() {
+	loc = memory[pc+1];
+	portOut[loc-2] = registers[A]; //2->0
+	pc += 2;
+}
+
+void si8080::in() {
+	loc = memory[pc+1];
+	registers[A] = portIn[loc-1]; //1->0
+	pc += 2;
+}
+
+void si8080::xthl() {
+	uint8_t tmp2 = memory[sp];
+	uint8_t tmp1 = memory[sp+1];
+
+	//replace 2 bytes on stack with H+L
+	loc = sp;
+	changeM(registers[L]);
+	loc++;
+	changeM(registers[H]);
+
+	//replace H+L with 2 bytes from stack
+	registers[L] = tmp2;
+	registers[H] = tmp1;
+}
+
+void si8080::xchg() {
+	uint8_t tmp2 = registers[E];
+	uint8_t tmp1 = registers[D];
+	registers[E] = registers[L];
+	registers[D] = registers[H];
+	registers[L] = tmp2;
+	registers[H] = tmp1;
+}
+
+void si8080::di() {
+	interrupt = false;
+}
+
+void si8080::pchl() {
+	pc = loc;
+}
+
+void si8080::sphl() {
+	sp = loc;
+}
+
+void si8080::ei() {
+	interrupt = true;
 }
 
 void si8080::changeM(uint8_t value) { //it was getting in the way tbh
@@ -515,44 +404,37 @@ void si8080::changeM(uint8_t value) { //it was getting in the way tbh
 			
 			if(bit) {
 				if(y > 240) {
-					if(x < 16) {							//white 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0xFF;			//B
-					}	
-					else if(x < 118) {						//green 
-						pixels[location] = 0x0; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0x0;			//B
-					}	
-					else if(x < 224) {						//white 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0xFF;			//B
+					if(x < 16) {						//white 
+						pixels[location] = 0xFF; 	//R
+						pixels[location+1] = 0xFF;	//G
+						pixels[location+2] = 0xFF;	//B
+					} else if(x < 118) {				//green 
+						pixels[location] = 0x0; 	//R
+						pixels[location+1] = 0xFF;	//G
+						pixels[location+2] = 0x0;	//B
+					} else if(x < 224) {				//white 
+						pixels[location] = 0xFF; 	//R
+						pixels[location+1] = 0xFF;	//G
+						pixels[location+2] = 0xFF;	//B
 					}
+				} else if(y > 184) {					//green 
+						pixels[location] = 0x0; 	//R
+						pixels[location+1] = 0xFF;	//G
+						pixels[location+2] = 0x0;	//B
+				} else if(y > 48) {						//white 
+						pixels[location] = 0xFF; 	//R
+						pixels[location+1] = 0xFF;	//G
+						pixels[location+2] = 0xFF;	//B
+				} else if(y > 32) {						//red 
+						pixels[location] = 0xFF; 	//R
+						pixels[location+1] = 0x0;	//G
+						pixels[location+2] = 0x0;	//B
+				} else if(y > 0) {						//white 
+						pixels[location] = 0xFF; 	//R
+						pixels[location+1] = 0xFF;	//G
+						pixels[location+2] = 0xFF;	//B
 				}
-				else if(y > 184) {							//green 
-						pixels[location] = 0x0; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0x0;			//B
-				}
-				else if(y > 48) {							//white 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0xFF;			//B
-				}
-				else if(y > 32) {							//red 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0x0;			//G
-						pixels[location+2] = 0x0;			//B
-				}
-				else if(y > 0) {							//white 
-						pixels[location] = 0xFF; 			//R
-						pixels[location+1] = 0xFF;			//G
-						pixels[location+2] = 0xFF;			//B
-				}
-			}
-			else {	//black
+			} else { //black
 				pixels[location] = 0x0;
 				pixels[location+1] = 0x0;
 				pixels[location+2] = 0x0;
@@ -563,40 +445,11 @@ void si8080::changeM(uint8_t value) { //it was getting in the way tbh
 } 
 
 bool si8080::checkCond() {
-	switch((opcode >> 3) & 0x7) {
-		case 0x0:	
-			if(!z)
-				return true;
-			break;
-		case 0x1:
-			if(z)
-				return true;
-			break;
-		case 0x2:
-			if(!cy)
-				return true;
-			break;
-		case 0x3:
-			if(cy)
-				return true;
-			break;
-		case 0x4:
-			if(!p)
-				return true;
-			break;
-		case 0x5:
-			if(p)
-				return true;
-			break;
-		case 0x6:
-			if(!s)
-				return true;
-			break;
-		case 0x7:
-			if(s)
-				return true;
-			break;
-	}
+	uint8_t check = (opcode >> 3) & 0x7;
+
+	if((check == 0x0 && !z) || (check == 0x1 && z) || (check == 0x2 && !cy) || (check == 0x3 && cy) || (check == 0x4 && !p) || (check == 0x5 && p) || (check == 0x6 && !s) || (check == 0x7 && s))
+		return true;
+
 	return false;
 }
 
@@ -614,8 +467,7 @@ void si8080::load(const char* filename) {
 	FILE* rom = fopen(filename, "rb");
 	if (rom == NULL) {
 		fputs("File error", stderr); 
-	}
-	else {
+	} else {
 		fseek(rom, 0, SEEK_END);
 		romSize = ftell(rom);
 		rewind(rom);
@@ -623,19 +475,17 @@ void si8080::load(const char* filename) {
 		char* buffer = (char*)malloc(sizeof(char) * romSize);
 		if (buffer == NULL) {
 			fputs("Memory error", stderr);
-		}
-		else {
+		} else {
 			uint16_t result = fread(buffer, 1, romSize, rom);
 			if (result != romSize) {
 				fputs("Reading error", stderr); 
-			}
-			else {
-				int tmp = romSize + 0x2000;
+			} else {
+				uint32_t tmp = romSize + 0x2000;
 				for(uint32_t i = 0; i < tmp; i++)
 					memory.push_back(0);	
 
 				pc = sp = cycles = cycBefore = 0;
-				interrupt = hlt = false;
+				interrupt = hltB = false;
 				debug = false;
 
 				fclose(rom);
@@ -648,10 +498,11 @@ void si8080::load(const char* filename) {
 	pixels = new uint8_t[224 * 256 * 3]; //vram is 224*32 bytes, each bit is a pixel
 
 	for(int x = 0; x < 224; x++) { 
-		for(int y = 0; y < 256; y++) { //2400, 2401.. bottom left to upper left then next row
-			pixels[(x * y)] 	= 0x0;
-			pixels[(x * y) + 1] = 0x0;
-			pixels[(x * y) + 2] = 0x0;
+		for(int y = 0; y < 256; y++) { //set each pixel to black
+			loc = x + (y * 224);
+			pixels[loc] 	= 0x0;
+			pixels[loc + 1] = 0x0;
+			pixels[loc + 2] = 0x0;
 		}
 	}
 
@@ -659,9 +510,9 @@ void si8080::load(const char* filename) {
 		registers[i] = 0;
 
 	//each word is a bit starting from bit 7 (x = nothing, ? = not sure, 1 = always on)
-	portIn[0] = 0b1000; //x 1right 1left 1fire 1 1p 2p credit
-	portIn[1] = 0b1000; //sw1 2right 2left 2fire sw2 tilt(0) sw3 sw4 http://www.brentradio.com/images/Other/Docs/SpaceInvaders/dipswitchsettings.txt
-	portIn[2] = 0b0; //shift register
+	portIn[0] =  0b1000; //x 1right 1left 1fire 1 1p 2p credit
+	portIn[1] =  0b1000; //sw1 2right 2left 2fire sw2 tilt(0) sw3 sw4 http://www.brentradio.com/images/Other/Docs/SpaceInvaders/dipswitchsettings.txt
+	portIn[2] =  0b0; //shift register
 	portOut[0] = 0b0; //00000bbb shift amount
 	portOut[1] = 0b0; //x x amp extended sound_aliendeath sound_playerdeath sound_shot sound_ufo
 	portOut[2] = 0b0; //shift data
