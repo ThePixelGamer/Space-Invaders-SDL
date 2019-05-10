@@ -114,8 +114,9 @@ int main(int argc, char* args[]) {
 						break;
 
 						case 3: 
+							core->soundB = (core->portOut[1] & 0x20) != 0;
 							if(core->soundB) {
-								if((core->portOut[1] & 0x1) != 0) 
+								if((core->portOut[1] & 0x1) != 0) {
 									Mix_PlayChannel(-1, wav1, 0);
 								if((core->portOut[1] & 0x2) != 0)
 									Mix_PlayChannel(-1, wav2, 0);
@@ -127,8 +128,7 @@ int main(int argc, char* args[]) {
 									Mix_PlayChannel(-1, wav5, 0);
 							}
 						break;
-						case 5: 
-							core->soundB = (core->portOut[3] >> 5) & 0x1;
+						case 5:
 							if(core->soundB) {
 								if((core->portOut[3] & 0x1) != 0)
 									Mix_PlayChannel(-1, wav6, 0);

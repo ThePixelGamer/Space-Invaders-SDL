@@ -53,7 +53,7 @@ constexpr void (si8080::*si8080::opcodeTable[256])();
 void si8080::emulateCycle() {
 	opcode = memory[pc];
 		
-	loc = (registers[H] << 8) + registers[L];
+	loc = ((registers[H] << 8) + registers[L]) & 0xffff;
 	cycBefore = cycles;
 
 	if(debugB)
