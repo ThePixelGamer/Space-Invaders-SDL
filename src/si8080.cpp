@@ -57,14 +57,11 @@ void si8080::emulateCycle() {
 	cycBefore = cycles;
 
 	if(debugB)
-		fprintf(log, "PC:%04x OP:%02x ", pc, opcode);
+		fprintf(log, "PC:%04x OP:%02x SP:%04x BC:%04x DE:%04x HL:%04x A:%02x Cy:%i AC:%i S:%i Z:%i P:%i\n", pc, opcode, sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p);
 	
 	(this->*opcodeTable[opcode])();
 	cycles += cyclesTable[opcode];
 	pc += pcTable[opcode];
-
-	if(debugB)
-		fprintf(log, "SP:%04x BC:%04x DE:%04x HL:%04x A:%02x Cy:%i AC:%i S:%i Z:%i P:%i\n",  sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p);
 }
 
 void si8080::nop() {}
@@ -252,7 +249,7 @@ void si8080::math() {
 		case 0x2: registers[A] = setCond(registers[A] - data, registers[A], data); break;
 		case 0x3: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy)); break;
 		case 0x4: registers[A] = setCond(registers[A] & data, 0, 0);
-				  ac = ((registers[A] | data) & 0x8) != 0;
+				  ac = ((registers[A] | data) & 0x8) == 0;
 				  cy = 0;
 		break;
 		case 0x5: registers[A] = setCond(registers[A] ^ data, 0, 0); 
@@ -351,7 +348,6 @@ void si8080::out() {
 
 void si8080::in() {
 	loc = memory[pc+1];
-	registers[A] = portIn[loc-1]; //1->0
 }
 
 void si8080::xthl() {
@@ -457,7 +453,7 @@ bool si8080::checkCond() {
 
 uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff) {
 	cy = (ans > 0xff);
-	ac = (((old ^ diff ^ ans) & 0x10) == 0x10);
+	ac = !(((old ^ diff ^ ans) & 0x10) == 0x10);
 	s = ((ans & 0x80) == 0x80);
 	z = ((ans & 0xff) == 0);
 	p = !__builtin_parity(ans & 0xff);
