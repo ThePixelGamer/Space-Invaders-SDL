@@ -53,7 +53,7 @@ constexpr void (si8080::*si8080::opcodeTable[256])();
 void si8080::emulateCycle() {
 	opcode = memory[pc];
 		
-	loc = ((registers[H] << 8) + registers[L]) & 0xffff;
+	loc = (registers[H] << 8) + registers[L];
 	cycBefore = cycles;
 
 	if(debugB)
@@ -84,14 +84,34 @@ void si8080::stax() {
 	changeM(registers[A]);
 }
 
+void si8080::ldax() {
+	uint8_t reg = (opcode >> 3) & 0x2;
+
+	loc = (registers[reg] << 8) + registers[reg+1];
+	registers[A] = memory[loc];
+}
+
 void si8080::inx() {
 	uint8_t reg = (opcode >> 3) & 0x6;
+	
  	if(reg == 0x6) 
 		sp += 1;
 	else {
 		loc = ((registers[reg] << 8) + registers[reg+1]) + 1;
 		registers[reg+1] = loc & 0xff;
 		registers[reg] = (loc >> 8) & 0xff;
+	}
+}
+
+void si8080::dcx() {
+	uint8_t reg = (opcode >> 3) & 0x6;
+
+	if(reg == 0x6) 
+		sp -= 1;
+	else {
+		loc = ((registers[reg] << 8) + registers[reg+1]) - 1;
+		registers[reg+1] = loc & 0xff;
+		registers[reg] = loc >> 8;
 	}
 }
 
@@ -110,67 +130,55 @@ void si8080::dcr() {
 	if(reg == 0x6)
 		changeM(setCond((memory[loc] - 1) & 0xFF, memory[loc], 1)); 
 	else
-		registers[reg] = setCond((registers[reg] - 1) & 0xFF, registers[reg], 1);
+		registers[reg] = setCond(registers[reg] - 1, registers[reg], 1);
 } 
-
-void si8080::mvi() {
-	uint8_t reg = (opcode >> 3) & 0x7;
-	if(reg == 0x6)
-		changeM(memory[pc+1]);
-	else 
-		registers[reg] = memory[pc+1];
-} 
-
-void si8080::rlc() {
-	cy = (((registers[A] & 0x80) == 0x80) ? 1 : 0);
-	registers[A] = (registers[A] << 1) + cy; 
-}
 
 void si8080::dad() {
 	uint8_t reg = (opcode >> 3) & 0x6;
+	uint32_t tmp = (registers[H] << 8) + registers[L];
 
 	if(reg == 0x6)
-		loc += sp;
+		tmp += sp;
 	else
-		loc += (registers[reg] << 8) + registers[reg+1];
+		tmp += (registers[reg] << 8) + registers[reg+1];
 
-	registers[L] = loc & 0xff;
-	registers[H] = (loc >> 8) & 0xff;
-	cy = (loc > 0xffff);
+	registers[L] = tmp & 0xff;
+	registers[H] = tmp >> 8;
+	cy = (tmp > 0xffff);
 } 
 
-void si8080::ldax() {
-	uint8_t reg = (opcode >> 3) & 0x2;
-
-	loc = (registers[reg] << 8) + registers[reg+1];
-	registers[A] = memory[loc];
-}
-
-void si8080::dcx() {
-	uint8_t reg = (opcode >> 3) & 0x6;
-
-	if(reg == 0x6) 
-		sp -= 1;
-	else {
-		loc = ((registers[reg] << 8) + registers[reg+1]) - 1;
-		registers[reg+1] = loc & 0xff;
-		registers[reg] = (loc >> 8) & 0xff;
-	}
+void si8080::rlc() {
+	cy = registers[A] >> 7;
+	registers[A] = (registers[A] << 1) + cy; 
 }
 
 void si8080::rrc() {
-	cy = (((registers[A] & 0x1) == 0x1) ? 1 : 0);
+	cy = registers[A] & 0x1;
 	registers[A] = (registers[A] >> 1) + (cy << 7);
 }
 
 void si8080::ral() {
-	registers[A] = (registers[A] << 1) + cy; 
-	cy = (((registers[A] & 0x80) == 0x80) ? 1 : 0);
+	uint8_t c = cy;
+	cy = registers[A] >> 7; 
+	registers[A] = (registers[A] << 1) + c;
 }
 
 void si8080::rar() {
-	registers[A] = (registers[A] >> 1) + (cy << 7); 
-	cy = (((registers[A] & 0x1) == 0x1) ? 1 : 0);
+	uint8_t c = cy;
+	cy = registers[A] & 1; 
+	registers[A] = (registers[A] >> 0x1) + (c << 7);
+}
+
+void si8080::daa() {
+    uint8_t lsb = registers[A] & 0xf;
+    uint8_t msb = registers[A] >> 4;
+
+    if (ac || lsb > 9)
+        registers[A] = setCond(registers[A] + 0x6, registers[A], 0x6);
+    if (cy || msb > 9 || (msb >= 9 && lsb > 9)) {
+        registers[A] = setCond(registers[A] + 0x60, registers[A], 0x60);
+		cy = 1;
+	}
 }
 
 void si8080::shld() {
@@ -180,24 +188,10 @@ void si8080::shld() {
 	changeM(registers[H]);
 }
 
-void si8080::daa() {
-    uint8_t lsb = registers[A] & 0xf;
-    uint8_t msb = registers[A] >> 4;
-
-    if (ac || lsb > 9)
-        registers[A] = setCond(registers[A] + 0x6, registers[A], 0x6);
-    if (cy || msb > 9)
-        registers[A] = setCond(registers[A] + 0x60, registers[A], 0x60);
-}
-
 void si8080::lhld() {
 	loc = (memory[pc+2] << 8) + memory[pc+1];
 	registers[L] = memory[loc];
 	registers[H] = memory[loc+1];
-}
-
-void si8080::cma() {
-	registers[A] = (registers[A]) ? 0 : 1;
 }
 
 void si8080::sta() {
@@ -205,17 +199,29 @@ void si8080::sta() {
 	changeM(registers[A]);
 }
 
-void si8080::stc() {
-	cy = 1;
-}
-
 void si8080::lda() {
 	loc = (memory[pc+2] << 8) + memory[pc+1];
 	registers[A] = memory[loc];
 }
 
+void si8080::cma() {
+	registers[A] = ~registers[A];
+}
+
+void si8080::stc() {
+	cy = 1;
+}
+
 void si8080::cmc() {
 	cy = (cy) ? 0 : 1;
+}
+
+void si8080::mvi() {
+	uint8_t reg = (opcode >> 3) & 0x7;
+	if(reg == 0x6)
+		changeM(memory[pc+1]);
+	else 
+		registers[reg] = memory[pc+1];
 }
 
 void si8080::mov() {
@@ -243,20 +249,30 @@ void si8080::math() {
 		data = memory[loc];
 
 	switch((opcode >> 3) & 0x7) {
-		case 0x7: setCond(registers[A] - data, registers[A], data); break;
-		case 0x0: registers[A] = setCond(registers[A] + data, registers[A], data); break;
-		case 0x1: registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy)); break;
-		case 0x2: registers[A] = setCond(registers[A] - data, registers[A], data); break;
-		case 0x3: registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy)); break;
-		case 0x4: registers[A] = setCond(registers[A] & data, 0, 0);
-				  ac = ((registers[A] | data) & 0x8) == 0;
-				  cy = 0;
+		case 0x7:	setCond(registers[A] - data, registers[A], data);
 		break;
-		case 0x5: registers[A] = setCond(registers[A] ^ data, 0, 0); 
-				  ac = cy = 0;
+		case 0x0: 	registers[A] = setCond(registers[A] + data, registers[A], data); 
+					cy = s; 
 		break;
-		case 0x6: registers[A] = setCond(registers[A] | data, 0, 0); 
-				  ac = cy = 0;
+		case 0x1: 	registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy)); 
+					cy = s; 
+		break;
+		case 0x2: 	registers[A] = setCond(registers[A] - data, registers[A], data); 
+					cy = s; 
+		break;
+		case 0x3: 	registers[A] = setCond(registers[A] - (data - cy), registers[A], (data + cy)); 
+					cy = s; 
+		break;
+		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, 0, 0);
+				  	ac = ((registers[A] | data) & 0x8) == 0;
+				  	cy = 0;
+					registers[A] = tmp;
+		} break;
+		case 0x5:	registers[A] = setCond(registers[A] ^ data, 0, 0);
+				  	ac = cy = 0;
+		break;	
+		case 0x6: 	registers[A] = setCond(registers[A] | data, 0, 0);
+				  	ac = cy = 0;
 		break; 
 	}
 }
@@ -351,8 +367,7 @@ void si8080::in() {
 }
 
 void si8080::xthl() {
-	uint8_t tmp2 = memory[sp];
-	uint8_t tmp1 = memory[sp+1];
+	uint16_t tmp = (memory[sp] << 8) + memory[sp+1];
 
 	//replace 2 bytes on stack with H+L
 	loc = sp;
@@ -361,17 +376,16 @@ void si8080::xthl() {
 	changeM(registers[H]);
 
 	//replace H+L with 2 bytes from stack
-	registers[L] = tmp2;
-	registers[H] = tmp1;
+	registers[L] = tmp >> 8;
+	registers[H] = tmp & 0xff;
 }
 
 void si8080::xchg() {
-	uint8_t tmp2 = registers[E];
-	uint8_t tmp1 = registers[D];
+	uint16_t tmp = (registers[E] << 8) + registers[D];
 	registers[E] = registers[L];
 	registers[D] = registers[H];
-	registers[L] = tmp2;
-	registers[H] = tmp1;
+	registers[L] = tmp >> 8;
+	registers[H] = tmp & 0xff;
 }
 
 void si8080::di() {
@@ -452,10 +466,15 @@ bool si8080::checkCond() {
 }
 
 uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff) {
+	if(ans < old) {
+		ac = !(((old ^ diff ^ ans) & 0x10) == 0x10);
+	} else if(ans > old) {
+		ac = ((old ^ diff ^ ans) & 0x10) == 0x10;
+	}
+
 	cy = (ans > 0xff);
-	ac = !(((old ^ diff ^ ans) & 0x10) == 0x10);
-	s = ((ans & 0x80) == 0x80);
-	z = ((ans & 0xff) == 0);
+	s = (ans & 0x80) == 0x80;
+	z = (ans & 0xff) == 0;
 	p = !__builtin_parity(ans & 0xff);
 
 	return (ans & 0xff);
