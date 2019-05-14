@@ -13,21 +13,22 @@ using namespace std;
 
 class si8080 {
 public:
-
     vector<uint8_t> memory;
-    uint8_t         opcode, registers[8], cy, ac, z, p, s, interruptB, hltB, soundB;
-    uint16_t        pc, sp;
-    uint16_t        loc, romSize, vramStart, cycles, cycBefore;
+    uint8_t         opcode, registers[8], cy, ac, z, p, s, interruptB, hltB, soundB, cpmB, debugB, portOut[5], portIn[3];
+    uint16_t        pc, sp, loc, cycles, cycBefore;
+    uint32_t        romSize, vramStart;
 
     FILE*           log;
     uint8_t*        pixels; //duplicate of vram but in 24 rgb format
-    uint8_t         portOut[5], portIn[3];
 
     void            emulateCycle();
     bool            checkCond();
     uint8_t         setCond(uint16_t, uint8_t, uint8_t);
-    void            changeM(uint8_t);  
+    void            changeM(uint8_t);
     void            load(const char*);
+
+    void            end();
+    void            cpm();
 
     void            nop();  //0x00 - 0x3f
     void            lxi();
@@ -75,8 +76,8 @@ public:
     static constexpr void (si8080::*opcodeTable[256])() = {
     //             0              1               2             3              4               5              6              7              8              9               a             b              c               d              e              f 
         &si8080::nop,  &si8080::lxi,  &si8080::stax, &si8080::inx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::rlc,  &si8080::nop,  &si8080::dad,  &si8080::ldax, &si8080::dcx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::rrc,  //0
-        &si8080::nop,  &si8080::lxi,  &si8080::stax, &si8080::inx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::ral,  &si8080::nop,  &si8080::dad,  &si8080::ldax, &si8080::dcx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::rar,  //1
-        &si8080::nop,  &si8080::lxi,  &si8080::shld, &si8080::inx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::daa,  &si8080::nop,  &si8080::dad,  &si8080::lhld, &si8080::dcx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::cma,  //2
+        &si8080::end,  &si8080::lxi,  &si8080::stax, &si8080::inx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::ral,  &si8080::nop,  &si8080::dad,  &si8080::ldax, &si8080::dcx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::rar,  //1
+        &si8080::cpm,  &si8080::lxi,  &si8080::shld, &si8080::inx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::daa,  &si8080::nop,  &si8080::dad,  &si8080::lhld, &si8080::dcx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::cma,  //2
         &si8080::nop,  &si8080::lxi,  &si8080::sta,  &si8080::inx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::stc,  &si8080::nop,  &si8080::dad,  &si8080::lda,  &si8080::dcx,  &si8080::inr,   &si8080::dcr,  &si8080::mvi,  &si8080::cmc,  //3
         &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  //4
         &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,  &si8080::mov,   &si8080::mov,  &si8080::mov,  &si8080::mov,  //5

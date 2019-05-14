@@ -55,21 +55,17 @@ int main(int argc, char* args[]) {
 	wav10 = Mix_LoadWAV("./sounds/spaceship_hit.wav"); //extra life
 
 	if(argc > 1) {
+		core->cpmB = true;
+		core->debugB = true;
 		core->load(args[1]);
-	} else {
+	} else
 		core->load("invaders.com");
-	}
 
 	time_point<steady_clock> fpsTimer(steady_clock::now());
 	frame fps{};
 	seconds secs{};
 	while(run) {
 		fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
-		secs = duration_cast<seconds>(fps);
-
-		if(secs.count() >= 1) {
-			SDL_SetWindowTitle(window, ("fps:" + to_string(fps.count()) + " Invaders").c_str());
-		}
 		if(fps.count() >= 1) {
 			fpsTimer = steady_clock::now();
 			cycCount = 0;
@@ -155,7 +151,7 @@ int main(int argc, char* args[]) {
 
 				cycCount += core->cycles - core->cycBefore;
 				if(core->cycles >= HALFFRAME) {
-					if(core->interruptB) {
+					if(core->interruptB && !core->cpmB) {
 						core->pc -= 3;
 						uint16_t pctmp = core->pc;
 						uint8_t optmp = core->memory[pctmp];
@@ -175,6 +171,8 @@ int main(int argc, char* args[]) {
 			SDL_RenderPresent(renderer);
 		}
 	}
+	if(core->debugB)
+		fclose(core->log); 
 
 	Mix_FreeChunk(wav1);
 	Mix_FreeChunk(wav2);

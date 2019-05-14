@@ -8,6 +8,7 @@
 #define H 0x4
 #define L 0x5
 
+constexpr void (si8080::*si8080::opcodeTable[256])();
 int cyclesTable[256] = {
 //  0   1   2   3   4   5   6  7  8   9   a   b   c   d  e  f 
 	4, 10,  7,  5,  5,  5,  7, 4, 4, 10,  7,  5,  5,  5, 7, 4, //0
@@ -27,7 +28,6 @@ int cyclesTable[256] = {
 	5, 10, 10, 18, 11, 11,  7, 5, 5,  5, 10,  4, 11,  4, 7, 5, //e
 	5, 10, 10,  4, 11, 11,  7, 5, 5,  5, 10,  4, 11,  4, 7, 5  //f
 };
-
 int pcTable[256] = {
 //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f 
 	1, 3, 1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 1, 1, 2, 1, //0
@@ -48,13 +48,14 @@ int pcTable[256] = {
 	0, 1, 0, 1, 0, 1, 2, 0, 0, 1, 0, 1, 0, 0, 2, 0  //f
 };
 
-constexpr void (si8080::*si8080::opcodeTable[256])();
-
 void si8080::emulateCycle() {
 	opcode = memory[pc];
 		
 	loc = (registers[H] << 8) + registers[L];
 	cycBefore = cycles;
+
+	if(debugB)
+		fprintf(log, "PC:%04x OP:%02x SP:%04x BC:%04x DE:%04x HL:%04x A:%02x Cy:%i AC:%i S:%i Z:%i P:%i\n", pc, opcode, sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p);
 
 	(this->*opcodeTable[opcode])();
 	cycles += cyclesTable[opcode];
@@ -66,12 +67,11 @@ void si8080::nop() {}
 void si8080::lxi() {
 	uint8_t reg = (opcode >> 3) & 0x6;
 	loc = (memory[pc+2] << 8) + memory[pc+1];
-	if(reg == 0x6) {
+	if(reg == 0x6)
 		sp = loc;
-	}
 	else {
 		registers[reg+1] = loc & 0xff;
-		registers[reg] = (loc >> 8) & 0xff;
+		registers[reg] = loc >> 8;
 	}
 } 
 
@@ -83,7 +83,6 @@ void si8080::stax() {
 
 void si8080::ldax() {
 	uint8_t reg = (opcode >> 3) & 0x2;
-
 	loc = (registers[reg] << 8) + registers[reg+1];
 	registers[A] = memory[loc];
 }
@@ -96,7 +95,7 @@ void si8080::inx() {
 	else {
 		loc = ((registers[reg] << 8) + registers[reg+1]) + 1;
 		registers[reg+1] = loc & 0xff;
-		registers[reg] = (loc >> 8) & 0xff;
+		registers[reg] = loc >> 8;
 	}
 }
 
@@ -210,7 +209,7 @@ void si8080::stc() {
 }
 
 void si8080::cmc() {
-	cy = (cy) ? 0 : 1;
+	cy = ~cy;
 }
 
 void si8080::mvi() {
@@ -265,13 +264,6 @@ void si8080::math() {
 	}
 }
 
-void si8080::retC() { //11 cond(3) 000
-	if(checkCond())
-		ret();
-	else
-		pc += 1;
-}
-
 void si8080::pop() { //11 rp(2) 0001
 	uint8_t reg = (opcode >> 3) & 0x6;
 
@@ -291,24 +283,6 @@ void si8080::pop() { //11 rp(2) 0001
 	sp += 2;
 }
 
-void si8080::jmpC() { //11 cond(3) 010
-	if(checkCond()) 
-		jmp();
-	else
-		pc += 3;
-}
-
-void si8080::jmp() {
-	pc = (memory[pc+2] << 8) + memory[pc+1];
-}
-
-void si8080::callC() { //11 cond(3) 100
-	if(checkCond())
-		call();
-	else
-		pc += 3;
-}
-
 void si8080::push() { //11 rp(2) 0101
 	uint8_t reg = (opcode >> 3) & 0x6;
 
@@ -323,18 +297,14 @@ void si8080::push() { //11 rp(2) 0101
 	sp -= 2;
 }
 
-void si8080::rst() { //11 exp(3) 111
-	call();
-	pc = (opcode & 0x38);
-
-	hltB = false;
-	interruptB = false;
-}
-
 void si8080::ret() {
 	pc = (memory[sp+1] << 8) + memory[sp];
 	sp += 2;
 	cycles += 6;
+}
+
+void si8080::jmp() {
+	pc = (memory[pc+2] << 8) + memory[pc+1];
 }
 
 void si8080::call() {
@@ -343,6 +313,35 @@ void si8080::call() {
 	sp -= 2;
 	pc = (memory[pc+2] << 8) + memory[pc+1];
 	cycles += 6;
+}
+
+void si8080::retC() { //11 cond(3) 000
+	if(checkCond())
+		ret();
+	else
+		pc += 1;
+}
+
+void si8080::jmpC() { //11 cond(3) 010
+	if(checkCond()) 
+		jmp();
+	else
+		pc += 3;
+}
+
+void si8080::callC() { //11 cond(3) 100
+	if(checkCond())
+		call();
+	else
+		pc += 3;
+}
+
+void si8080::rst() { //11 exp(3) 111
+	call();
+	pc = (opcode & 0x38);
+
+	hltB = false;
+	interruptB = false;
 }
 
 void si8080::out() {
@@ -376,10 +375,6 @@ void si8080::xchg() {
 	registers[H] = tmp & 0xff;
 }
 
-void si8080::di() {
-	interruptB = false;
-}
-
 void si8080::pchl() {
 	pc = loc;
 }
@@ -388,13 +383,35 @@ void si8080::sphl() {
 	sp = loc;
 }
 
+void si8080::di() {
+	interruptB = false;
+}
+
 void si8080::ei() {
 	interruptB = true;
 }
 
+void si8080::cpm() {
+	switch(registers[C]) {
+		case 0x2: printf("%c", memory[registers[E]]); break;
+		case 0x9: 
+			for(uint16_t location = (registers[D] << 8) + registers[E]; memory[location] != 0x24; location++)
+				printf("%c", memory[location]);
+
+			printf("$");
+			break;
+	}
+
+	ret();
+}
+
+void si8080::end() { //warm boot
+
+}
+
 void si8080::changeM(uint8_t value) { //it was getting in the way tbh
-	if(loc >= 0x2400 && loc < 0x4000) {
-		int offset = (loc - 0x2400) * 8; //send this and the value over and copy the rest of the code below
+	if(loc >= vramStart && loc < (vramStart + 0x1C00)) {
+		int offset = (loc - vramStart) * 8; //send this and the value over and copy the rest of the code below
 		int x = offset / 256;			 //and update the screen every 1/60th of a second (but don't send the
 		int y = 255 - (offset % 256);	 //pixels at that framerate)
 		
@@ -447,10 +464,7 @@ void si8080::changeM(uint8_t value) { //it was getting in the way tbh
 bool si8080::checkCond() {
 	uint8_t check = (opcode >> 3) & 0x7;
 
-	if((check == 0x0 && !z) || (check == 0x1 && z) || (check == 0x2 && !cy) || (check == 0x3 && cy) || (check == 0x4 && !p) || (check == 0x5 && p) || (check == 0x6 && !s) || (check == 0x7 && s))
-		return true;
-
-	return false;
+	return ((check == 0x0 && !z) || (check == 0x1 && z) || (check == 0x2 && !cy) || (check == 0x3 && cy) || (check == 0x4 && !p) || (check == 0x5 && p) || (check == 0x6 && !s) || (check == 0x7 && s));
 }
 
 uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff) {
@@ -480,14 +494,24 @@ void si8080::load(const char* filename) {
 			if (result != romSize) {
 				fputs("Reading error", stderr); 
 			} else {
-				uint32_t tmp = romSize + 0x2000;
-				for(uint32_t i = 0; i < romSize; i++)
-					memory.push_back(buffer[i]);
-				for(uint32_t i = romSize; i < tmp; i++)
-					memory.push_back(0);	
+				pc = (cpmB) ? 0x100 : 0;
+				uint32_t tmp = sp = vramStart = pc + romSize + 0x400;
 
-				pc = sp = cycles = cycBefore = 0;
-				interruptB = hltB = false;
+				if(cpmB) {
+					for(uint32_t i = 0; i < pc; i++)
+						memory.push_back(0);
+
+					memory[0x0] = 0x10; //warm boot
+					memory[0x5] = 0x20; //cpm call
+					memory[0x6] = tmp & 0xff; //ram end lsb
+					memory[0x7] = tmp >> 8; //ram end msb
+				}
+
+				tmp += 0x1C00;
+				for(uint32_t i = pc; i < tmp; i++)
+					memory.push_back(((i >= romSize) ? 0 : buffer[i-pc]));
+
+				cycles = cycBefore = interruptB = hltB = 0;
 
 				fclose(rom);
 				free(buffer);
@@ -497,15 +521,9 @@ void si8080::load(const char* filename) {
 	
 	//do space invaders stuff
 	pixels = new uint8_t[224 * 256 * 3]; //vram is 224*32 bytes, each bit is a pixel
-
-	for(int x = 0; x < 224; x++) { 
-		for(int y = 0; y < 256; y++) { //set each pixel to black
-			loc = x + (y * 224);
-			pixels[loc] 	= 0x0;
-			pixels[loc + 1] = 0x0;
-			pixels[loc + 2] = 0x0;
-		}
-	}
+	
+	for(uint32_t i = 0; i < 172032; i++)
+		pixels[i] = 0;
 
 	for(int i = 0; i < 8; i++)
 		registers[i] = 0;
@@ -519,4 +537,7 @@ void si8080::load(const char* filename) {
 	portOut[2] = 0b0; //shift data
 	portOut[3] = 0b0; //x x x sound_ufodeath sound_fleet4 sound_fleet3 sound_fleet2 sound_fleet1
 	portOut[4] = 0b0; //watchdog
+
+	if(debugB)
+		log = fopen("log.txt", "w");
 }
