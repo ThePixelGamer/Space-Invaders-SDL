@@ -246,11 +246,10 @@ void si8080::math() {
 		data = memory[loc];
 
 	switch((opcode >> 3) & 0x7) {
-		case 0x7:	setCond(registers[A] - data, registers[A], data);
-		break;
+		case 0x7:	setCond(registers[A] + (~data + 1), registers[A], (~data + 1)); break;
 		case 0x0: 	registers[A] = setCond(registers[A] + data, registers[A], data); break;
 		case 0x1: 	registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy)); break;
-		case 0x2: 	registers[A] = setCond(registers[A] - data, registers[A], data); break;
+		case 0x2: 	registers[A] = setCond(registers[A] + (~data + 1), registers[A], (~data + 1)); break;
 		case 0x3: 	registers[A] = setCond(registers[A] + (~(data + cy) + 1), registers[A], (~(data + cy) + 1)); break;
 		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, 0, 0);
 				  	ac = ((registers[A] | data) & 0x8) == 0;
@@ -455,11 +454,7 @@ bool si8080::checkCond() {
 }
 
 uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff) {
-	if(ans < old)
-		ac = !(((old ^ diff ^ ans) & 0x10) == 0x10);
-	else if(ans > old)
-		ac = ((old ^ diff ^ ans) & 0x10) == 0x10;
-	
+	ac = ((old ^ diff ^ ans) & 0x10) == 0x10;
 	cy = (ans > 0xff);
 	s = (ans & 0x80) == 0x80;
 	z = (ans & 0xff) == 0;
