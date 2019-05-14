@@ -15,7 +15,7 @@ class si8080 {
 public:
 
     vector<uint8_t> memory;
-    uint8_t         opcode, registers[8], cy, ac, z, p, s, interruptB, hltB, soundB, debugB;
+    uint8_t         opcode, registers[8], cy, ac, z, p, s, interruptB, hltB, soundB;
     uint16_t        pc, sp;
     uint16_t        loc, romSize, vramStart, cycles, cycBefore;
 

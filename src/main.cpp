@@ -176,9 +176,6 @@ int main(int argc, char* args[]) {
 		}
 	}
 
-	if(core->debugB)
-		fclose(core->log); 
-
 	Mix_FreeChunk(wav1);
 	Mix_FreeChunk(wav2);
 	Mix_FreeChunk(wav3);
