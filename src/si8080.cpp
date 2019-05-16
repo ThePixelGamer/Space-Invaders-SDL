@@ -122,11 +122,14 @@ void si8080::inr() {
 
 void si8080::dcr() {
 	uint8_t reg = (opcode >> 3) & 0x7;
+	bool c = cy;
 
 	if(reg == 0x6)
 		changeM(setCond(memory[loc] - 1, memory[loc], (~1 + 1))); 
 	else
 		registers[reg] = setCond(registers[reg] - 1, registers[reg], (~1 + 1));
+
+	cy = c;
 } 
 
 void si8080::dad() {
@@ -254,7 +257,7 @@ void si8080::math() {
 		case 0x2: 	registers[A] = setCond(registers[A] - data, registers[A], (~data + 1)); break;
 		case 0x3: 	registers[A] = setCond(registers[A] - data - cy, registers[A], (~(data + cy) + 1)); break;
 		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, 0, 0);
-				  	ac = ((registers[A] | data) & 0x8) == 0;
+				  	ac = ((registers[A] | data) & 0x8) != 0;
 				  	cy = 0;
 					registers[A] = tmp;
 		} break;
@@ -400,15 +403,13 @@ void si8080::cpm() {
 		case 0x9: 
 			for(uint16_t location = (registers[D] << 8) + registers[E]; memory[location] != 0x24; location++)
 				printf("%c", memory[location]);
-				
 			break;
 	}
-
 	ret();
 }
 
 void si8080::end() { //warm boot
-
+	hlt();
 }
 
 void si8080::changeM(uint8_t value) { //it was getting in the way tbh

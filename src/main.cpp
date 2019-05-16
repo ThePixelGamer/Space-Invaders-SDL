@@ -7,6 +7,7 @@
 #include <iostream>
 #include <chrono>
 #include <cstdint>
+#include <cmath>
 
 #include "si8080.h"
 
@@ -54,7 +55,6 @@ int main(int argc, char* args[]) {
 
 	if(argc > 1) {
 		fpsL = 0;
-		fpsI = 9999;
 		core->cpmB = true;
 		core->debugB = true;
 		core->load(args[1]);
@@ -65,6 +65,9 @@ int main(int argc, char* args[]) {
 		core->load("invaders.com");
 	}
 
+	double cycPerFrame = round((double)CLOCK / fpsI);
+	double everyHalfCPF = round((double)CLOCK / (fpsI * 2));
+
 	time_point<steady_clock> fpsTimer(steady_clock::now());
 	frame fps{};
 	while(run) {
@@ -72,7 +75,7 @@ int main(int argc, char* args[]) {
 		if(fps.count() >= fpsL) {
 			fpsTimer = steady_clock::now();
 			cycCount = 0;
-			while(cycCount <= CLOCK/fpsI) {
+			while(cycCount <= cycPerFrame) {
 				while(SDL_PollEvent(&event)) { //user input
 					switch(event.type) {
 						case SDL_KEYDOWN: keyboard(true); break;
@@ -132,9 +135,9 @@ int main(int argc, char* args[]) {
 				}
 
 				cycCount += core->cycles - core->cycBefore;
-				if(core->cycles >= CLOCK/(fpsI*2)) {
+				if(core->cycles >= everyHalfCPF) {
 					if(core->interruptB && !core->cpmB) {
-						uint16_t pctmp = core->pc;
+						uint16_t pctmp = core->pc -= 3;
 						uint8_t optmp = core->memory[pctmp];
 						core->memory[pctmp] = ((vInterrupt) ? 0xcf : 0xd7);
 						core->emulateCycle();
