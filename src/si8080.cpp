@@ -188,9 +188,8 @@ void si8080::shld() {
 }
 
 void si8080::lhld() {
-	loc = (memory[pc+2] << 8) + memory[pc+1];
-	registers[L] = memory[loc];
-	registers[H] = memory[loc+1];
+	registers[L] = memory[memory[pc+1]];
+	registers[H] = memory[memory[pc+2]];
 }
 
 void si8080::sta() {
@@ -248,20 +247,20 @@ void si8080::math() {
 		data = memory[loc];
 
 	switch((opcode >> 3) & 0x7) {
-		case 0x7:	setCond(registers[A] - data, registers[A], data); break;
+		case 0x7:	setCond(registers[A] - data, registers[A], (~data + 1)); break;
 		case 0x0: 	registers[A] = setCond(registers[A] + data, registers[A], data); break;
 		case 0x1: 	registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy)); break;
-		case 0x2: 	registers[A] = setCond(registers[A] - data, registers[A], data); break;
-		case 0x3: 	registers[A] = setCond(registers[A] - data - cy, registers[A], (data - cy)); break;
-		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, 0, 0);
+		case 0x2: 	registers[A] = setCond(registers[A] - data, registers[A], (~data + 1)); break;
+		case 0x3: 	registers[A] = setCond(registers[A] - data - cy, registers[A], (~(data + cy) + 1)); break;
+		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, registers[A], data);
 				  	ac = ((registers[A] | data) & 0x8) == 0;
 				  	cy = 0;
 					registers[A] = tmp;
 		} break;
-		case 0x5:	registers[A] = setCond(registers[A] ^ data, 0, 0);
+		case 0x5:	registers[A] = setCond(registers[A] ^ data, registers[A], data);
 				  	ac = cy = 0;
 		break;	
-		case 0x6: 	registers[A] = setCond(registers[A] | data, 0, 0);
+		case 0x6: 	registers[A] = setCond(registers[A] | data, registers[A], data);
 				  	ac = cy = 0;
 		break; 
 	}
@@ -471,7 +470,13 @@ bool si8080::checkCond() {
 }
 
 uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff) {
-	ac = ((old ^ diff ^ ans) & 0x10) == 0x10;
+	if(ans < old) {
+		ac = !(((old ^ diff ^ ans) & 0x10) == 0x10);
+	}
+	else {
+		ac = ((old ^ diff ^ ans) & 0x10) == 0x10;
+	}
+	
 	cy = (ans > 0xff);
 	s = (ans & 0x80) == 0x80;
 	z = (ans & 0xff) == 0;
@@ -498,7 +503,7 @@ void si8080::load(const char* filename) {
 				fputs("Reading error", stderr); 
 			} else {
 				pc = (cpmB) ? 0x100 : 0;
-				uint32_t tmp = sp = vramStart = pc + romSize + 0x400;
+				uint32_t tmp = vramStart = pc + romSize + 0x400;
 
 				if(cpmB) {
 					for(uint32_t i = 0; i < pc; i++)
