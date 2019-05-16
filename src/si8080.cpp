@@ -124,9 +124,9 @@ void si8080::dcr() {
 	uint8_t reg = (opcode >> 3) & 0x7;
 
 	if(reg == 0x6)
-		changeM(setCond(memory[loc] - 1, memory[loc], 1)); 
+		changeM(setCond(memory[loc] - 1, memory[loc], (~1 + 1))); 
 	else
-		registers[reg] = setCond(registers[reg] - 1, registers[reg], 1);
+		registers[reg] = setCond(registers[reg] - 1, registers[reg], (~1 + 1));
 } 
 
 void si8080::dad() {
@@ -188,8 +188,9 @@ void si8080::shld() {
 }
 
 void si8080::lhld() {
-	registers[L] = memory[memory[pc+1]];
-	registers[H] = memory[memory[pc+2]];
+	loc = (memory[pc+2] << 8) + memory[pc+1];
+	registers[L] = memory[loc];
+	registers[H] = memory[loc+1];
 }
 
 void si8080::sta() {
@@ -252,15 +253,15 @@ void si8080::math() {
 		case 0x1: 	registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy)); break;
 		case 0x2: 	registers[A] = setCond(registers[A] - data, registers[A], (~data + 1)); break;
 		case 0x3: 	registers[A] = setCond(registers[A] - data - cy, registers[A], (~(data + cy) + 1)); break;
-		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, registers[A], data);
+		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, 0, 0);
 				  	ac = ((registers[A] | data) & 0x8) == 0;
 				  	cy = 0;
 					registers[A] = tmp;
 		} break;
-		case 0x5:	registers[A] = setCond(registers[A] ^ data, registers[A], data);
+		case 0x5:	registers[A] = setCond(registers[A] ^ data, 0, 0);
 				  	ac = cy = 0;
 		break;	
-		case 0x6: 	registers[A] = setCond(registers[A] | data, registers[A], data);
+		case 0x6: 	registers[A] = setCond(registers[A] | data, 0, 0);
 				  	ac = cy = 0;
 		break; 
 	}
@@ -399,8 +400,7 @@ void si8080::cpm() {
 		case 0x9: 
 			for(uint16_t location = (registers[D] << 8) + registers[E]; memory[location] != 0x24; location++)
 				printf("%c", memory[location]);
-
-			printf("$");
+				
 			break;
 	}
 
@@ -470,13 +470,7 @@ bool si8080::checkCond() {
 }
 
 uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff) {
-	if(ans < old) {
-		ac = !(((old ^ diff ^ ans) & 0x10) == 0x10);
-	}
-	else {
-		ac = ((old ^ diff ^ ans) & 0x10) == 0x10;
-	}
-	
+	ac = ((old ^ diff ^ ans) & 0x10) == 0x10;
 	cy = (ans > 0xff);
 	s = (ans & 0x80) == 0x80;
 	z = (ans & 0xff) == 0;
@@ -517,7 +511,7 @@ void si8080::load(const char* filename) {
 
 				tmp += 0x1C00;
 				for(uint32_t i = pc; i < tmp; i++)
-					memory.push_back(((i >= romSize) ? 0 : buffer[i-pc]));
+					memory.push_back(((i >= (romSize+pc)) ? 0 : buffer[i-pc]));
 
 				cycles = cycBefore = interruptB = hltB = 0;
 
