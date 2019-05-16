@@ -124,7 +124,7 @@ void si8080::dcr() {
 	uint8_t reg = (opcode >> 3) & 0x7;
 
 	if(reg == 0x6)
-		changeM(setCond((memory[loc] - 1) & 0xFF, memory[loc], 1)); 
+		changeM(setCond(memory[loc] - 1, memory[loc], 1)); 
 	else
 		registers[reg] = setCond(registers[reg] - 1, registers[reg], 1);
 } 
@@ -162,19 +162,22 @@ void si8080::ral() {
 void si8080::rar() {
 	uint8_t c = cy;
 	cy = registers[A] & 1; 
-	registers[A] = (registers[A] >> 0x1) + (c << 7);
+	registers[A] = (registers[A] >> 1) + (c << 7);
 }
 
 void si8080::daa() {
     uint8_t lsb = registers[A] & 0xf;
     uint8_t msb = registers[A] >> 4;
+	uint8_t total = 0;
 
-    if (ac || lsb > 9)
-        registers[A] = setCond(registers[A] + 0x6, registers[A], 0x6);
-    if (cy || msb > 9 || (msb >= 9 && lsb > 9)) {
-        registers[A] = setCond(registers[A] + 0x60, registers[A], 0x60);
-		cy = 1;
+    if (ac || lsb > 9) {
+    	total += 0x6;
 	}
+    if (cy || msb > 9 || (msb >= 9 && lsb > 9)) {
+    	total += 0x60;
+	}
+	
+    registers[A] = setCond(registers[A] + total, registers[A], total);
 }
 
 void si8080::shld() {
@@ -209,7 +212,7 @@ void si8080::stc() {
 }
 
 void si8080::cmc() {
-	cy = ~cy;
+	cy = !cy;
 }
 
 void si8080::mvi() {
@@ -245,11 +248,11 @@ void si8080::math() {
 		data = memory[loc];
 
 	switch((opcode >> 3) & 0x7) {
-		case 0x7:	setCond(registers[A] + (~data + 1), registers[A], (~data + 1)); break;
+		case 0x7:	setCond(registers[A] - data, registers[A], data); break;
 		case 0x0: 	registers[A] = setCond(registers[A] + data, registers[A], data); break;
 		case 0x1: 	registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy)); break;
-		case 0x2: 	registers[A] = setCond(registers[A] + (~data + 1), registers[A], (~data + 1)); break;
-		case 0x3: 	registers[A] = setCond(registers[A] + (~(data + cy) + 1), registers[A], (~(data + cy) + 1)); break;
+		case 0x2: 	registers[A] = setCond(registers[A] - data, registers[A], data); break;
+		case 0x3: 	registers[A] = setCond(registers[A] - data - cy, registers[A], (data - cy)); break;
 		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, 0, 0);
 				  	ac = ((registers[A] | data) & 0x8) == 0;
 				  	cy = 0;

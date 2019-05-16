@@ -16,8 +16,8 @@ using ms = duration<float, milli>;
 
 #define SCREEN_HEIGHT 256
 #define SCREEN_WIDTH 224
-#define FRAME 33323 //2000000 / 60 - 11 (for rst)
-#define HALFFRAME 16656 //2000000 / 120 - 11 (for rst)
+#define FRAME 33333 
+#define HALFFRAME 16666
 
 SDL_Window*		window;
 SDL_Renderer*	renderer;
@@ -25,7 +25,7 @@ SDL_Texture*	texture;
 SDL_Event		event;
 const Uint8*	state;
 SDL_DisplayMode dm;
-Mix_Chunk		*wav1, *wav2, *wav3, *wav4, *wav5, *wav6, *wav7, *wav8, *wav9, *wav10;
+// Mix_Chunk		*wav1, *wav2, *wav3, *wav4, *wav5, *wav6, *wav7, *wav8, *wav9, *wav10;
 
 si8080* core = new si8080();
 bool run = true, vInterrupt = true;
@@ -41,29 +41,31 @@ int main(int argc, char* args[]) {
 	renderer = SDL_CreateRenderer(window, -1, 0);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-	Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 640);
-	Mix_Volume(-1, MIX_MAX_VOLUME/8);
-	wav1 = Mix_LoadWAV("./sounds/spaceship_move.wav");	
-	wav2 = Mix_LoadWAV("./sounds/player_shot.wav");
-	wav3 = Mix_LoadWAV("./sounds/player_hit.wav");
-	wav4 = Mix_LoadWAV("./sounds/invaders_hit.wav");
-	wav5 = Mix_LoadWAV("./sounds/spaceship_hit.wav");
-	wav6 = Mix_LoadWAV("./sounds/invaders_move1.wav");
-	wav7 = Mix_LoadWAV("./sounds/invaders_move2.wav");
-	wav8 = Mix_LoadWAV("./sounds/invaders_move3.wav");
-	wav9 = Mix_LoadWAV("./sounds/invaders_move4.wav");
-	wav10 = Mix_LoadWAV("./sounds/spaceship_hit.wav"); //extra life
+	// Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 640);
+	// Mix_Volume(-1, MIX_MAX_VOLUME/8);
+	// wav1 = Mix_LoadWAV("./sounds/spaceship_move.wav");	
+	// wav2 = Mix_LoadWAV("./sounds/player_shot.wav");
+	// wav3 = Mix_LoadWAV("./sounds/player_hit.wav");
+	// wav4 = Mix_LoadWAV("./sounds/invaders_hit.wav");
+	// wav5 = Mix_LoadWAV("./sounds/spaceship_hit.wav");
+	// wav6 = Mix_LoadWAV("./sounds/invaders_move1.wav");
+	// wav7 = Mix_LoadWAV("./sounds/invaders_move2.wav");
+	// wav8 = Mix_LoadWAV("./sounds/invaders_move3.wav");
+	// wav9 = Mix_LoadWAV("./sounds/invaders_move4.wav");
+	// wav10 = Mix_LoadWAV("./sounds/spaceship_hit.wav"); //extra life
 
 	if(argc > 1) {
 		core->cpmB = true;
 		core->debugB = true;
 		core->load(args[1]);
-	} else
+	} else {
+		core->cpmB = false;
+		core->debugB = false;
 		core->load("invaders.com");
+	}
 
 	time_point<steady_clock> fpsTimer(steady_clock::now());
 	frame fps{};
-	seconds secs{};
 	while(run) {
 		fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
 		if(fps.count() >= 1) {
@@ -116,32 +118,32 @@ int main(int argc, char* args[]) {
 
 						case 3: 
 							core->soundB = (core->portOut[1] & 0x20) != 0;
-							if(core->soundB) {
-								if((core->portOut[1] & 0x1) != 0)
-									Mix_PlayChannel(-1, wav1, 0);
-								if((core->portOut[1] & 0x2) != 0)
-									Mix_PlayChannel(-1, wav2, 0);
-								if((core->portOut[1] & 0x4) != 0)
-									Mix_PlayChannel(-1, wav3, 0);
-								if((core->portOut[1] & 0x8) != 0)
-									Mix_PlayChannel(-1, wav4, 0);
-								if((core->portOut[1] & 0x10) != 0)
-									Mix_PlayChannel(-1, wav5, 0);
-							}
+							// if(core->soundB) {
+							// 	if((core->portOut[1] & 0x1) != 0)
+							// 		Mix_PlayChannel(-1, wav1, 0);
+							// 	if((core->portOut[1] & 0x2) != 0)
+							// 		Mix_PlayChannel(-1, wav2, 0);
+							// 	if((core->portOut[1] & 0x4) != 0)
+							// 		Mix_PlayChannel(-1, wav3, 0);
+							// 	if((core->portOut[1] & 0x8) != 0)
+							// 		Mix_PlayChannel(-1, wav4, 0);
+							// 	if((core->portOut[1] & 0x10) != 0)
+							// 		Mix_PlayChannel(-1, wav5, 0);
+							// }
 						break;
 						case 5:
-							if(core->soundB) {
-								if((core->portOut[3] & 0x1) != 0)
-									Mix_PlayChannel(-1, wav6, 0);
-								if((core->portOut[3] & 0x2) != 0)
-									Mix_PlayChannel(-1, wav7, 0);
-								if((core->portOut[3] & 0x4) != 0)
-									Mix_PlayChannel(-1, wav8, 0);
-								if((core->portOut[3] & 0x8) != 0)
-									Mix_PlayChannel(-1, wav9, 0);
-								if((core->portOut[3] & 0x10) != 0)
-									Mix_PlayChannel(-1, wav10, 0);
-							}
+							// if(core->soundB) {
+							// 	if((core->portOut[3] & 0x1) != 0)
+							// 		Mix_PlayChannel(-1, wav6, 0);
+							// 	if((core->portOut[3] & 0x2) != 0)
+							// 		Mix_PlayChannel(-1, wav7, 0);
+							// 	if((core->portOut[3] & 0x4) != 0)
+							// 		Mix_PlayChannel(-1, wav8, 0);
+							// 	if((core->portOut[3] & 0x8) != 0)
+							// 		Mix_PlayChannel(-1, wav9, 0);
+							// 	if((core->portOut[3] & 0x10) != 0)
+							// 		Mix_PlayChannel(-1, wav10, 0);
+							// }
 						break;
 
 						case 6: break; //writes A to this port, debug thing?
@@ -174,16 +176,16 @@ int main(int argc, char* args[]) {
 	if(core->debugB)
 		fclose(core->log); 
 
-	Mix_FreeChunk(wav1);
-	Mix_FreeChunk(wav2);
-	Mix_FreeChunk(wav3);
-	Mix_FreeChunk(wav4);
-	Mix_FreeChunk(wav5);
-	Mix_FreeChunk(wav6);
-	Mix_FreeChunk(wav7);
-	Mix_FreeChunk(wav8);
-	Mix_FreeChunk(wav9);
-	Mix_FreeChunk(wav10);
+	// Mix_FreeChunk(wav1);
+	// Mix_FreeChunk(wav2);
+	// Mix_FreeChunk(wav3);
+	// Mix_FreeChunk(wav4);
+	// Mix_FreeChunk(wav5);
+	// Mix_FreeChunk(wav6);
+	// Mix_FreeChunk(wav7);
+	// Mix_FreeChunk(wav8);
+	// Mix_FreeChunk(wav9);
+	// Mix_FreeChunk(wav10);
 	SDL_DestroyTexture(texture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window); 

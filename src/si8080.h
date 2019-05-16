@@ -14,7 +14,8 @@ using namespace std;
 class si8080 {
 public:
     vector<uint8_t> memory;
-    uint8_t         opcode, registers[8], cy, ac, z, p, s, interruptB, hltB, soundB, cpmB, debugB, portOut[5], portIn[3];
+    bool            cy, ac, z, p, s;
+    uint8_t         opcode, registers[8], interruptB, hltB, soundB, cpmB, debugB, portOut[5], portIn[3];
     uint16_t        pc, sp, loc, cycles, cycBefore;
     uint32_t        romSize, vramStart;
 
