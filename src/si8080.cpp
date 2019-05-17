@@ -55,7 +55,7 @@ void si8080::emulateCycle() {
 	cycBefore = cycles;
 
 	if(debugB)
-		fprintf(log, "PC:%04x OP:%02x SP:%04x BC:%04x DE:%04x HL:%04x A:%02x Cy:%i AC:%i S:%i Z:%i P:%i\n", pc, opcode, sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), ((registers[H] << 8) + registers[L]), registers[A], cy, ac, s, z, p);
+		fprintf(log, "PC:%04x OP:%02x SP:%04x BC:%04x DE:%04x HL:%04x A:%02x Cy:%i AC:%i S:%i Z:%i P:%i\n", pc, opcode, sp, ((registers[B] << 8) + registers[C]), ((registers[D] << 8) + registers[E]), loc, registers[A], cy, ac, s, z, p);
 
 	(this->*opcodeTable[opcode])();
 	cycles += cyclesTable[opcode];
@@ -134,7 +134,7 @@ void si8080::dcr() {
 
 void si8080::dad() {
 	uint8_t reg = (opcode >> 3) & 0x6;
-	uint32_t tmp = (registers[H] << 8) + registers[L];
+	uint32_t tmp = loc;
 
 	if(reg == 0x6)
 		tmp += sp;
@@ -399,7 +399,7 @@ void si8080::ei() {
 
 void si8080::cpm() {
 	switch(registers[C]) {
-		case 0x2: printf("%c", memory[registers[E]]); break;
+		case 0x2: printf("%c", registers[E]); break;
 		case 0x9: 
 			for(uint16_t location = (registers[D] << 8) + registers[E]; memory[location] != 0x24; location++)
 				printf("%c", memory[location]);

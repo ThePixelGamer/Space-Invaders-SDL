@@ -29,11 +29,11 @@ SDL_DisplayMode dm;
 si8080* core = new si8080();
 bool run = true, vInterrupt = true;
 uint8_t port1 = 0b1000, port2 = 0b1000, x, y, offset;
-uint32_t cycCount = 0, fpsI = 60, fpsL = 1;
+uint32_t cycCount = 0, fpsI = 60;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
 	SDL_GetCurrentDisplayMode(0, &dm);
 
 	window = SDL_CreateWindow("Space Invaders", (dm.w/2)-(SCREEN_WIDTH/2), (dm.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH*2, SCREEN_HEIGHT*2, SDL_WINDOW_RESIZABLE);
@@ -54,16 +54,18 @@ int main(int argc, char* args[]) {
 	// wav10 = Mix_LoadWAV("./sounds/spaceship_hit.wav"); //extra life
 
 	if(argc > 1) {
-		fpsL = 0;
 		core->cpmB = true;
-		core->debugB = true;
+		core->debugB = false;
 		core->load(args[1]);
 	} else {
-		fpsL = 1;
 		core->cpmB = false;
 		core->debugB = false;
 		core->load("invaders.com");
 	}
+
+	SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
+	SDL_RenderCopy(renderer, texture, NULL, NULL);
+	SDL_RenderPresent(renderer);
 
 	double cycPerFrame = round((double)CLOCK / fpsI);
 	double everyHalfCPF = round((double)CLOCK / (fpsI * 2));
@@ -71,87 +73,104 @@ int main(int argc, char* args[]) {
 	time_point<steady_clock> fpsTimer(steady_clock::now());
 	frame fps{};
 	while(run) {
-		fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
-		if(fps.count() >= fpsL) {
-			fpsTimer = steady_clock::now();
-			cycCount = 0;
-			while(cycCount <= cycPerFrame) {
-				while(SDL_PollEvent(&event)) { //user input
+		if(core->cpmB) {
+			fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
+			if(fps.count() >= 60) { //run input every 10 frames
+				fpsTimer = steady_clock::now();
+
+				if(SDL_PollEvent(&event)) { //user input
+					switch(event.type) {
+						case SDL_KEYDOWN: keyboard(true); break;
+					}
+				}
+			}
+
+			if(!core->hltB)
+				core->emulateCycle();
+		} else {
+			fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
+			if(fps.count() >= 1) {
+				fpsTimer = steady_clock::now();
+				cycCount = 0;
+
+				if(SDL_PollEvent(&event)) { //user input
 					switch(event.type) {
 						case SDL_KEYDOWN: keyboard(true); break;
 						case SDL_KEYUP: keyboard(false); break;
 					}
 				}
 
-				if(core->hltB)
-					core->cycles += 4;
-				else
-					core->emulateCycle();
-
-				if(core->opcode == 0xdb) { //game input
-					switch(core->loc) {
-						case 1: core->registers[0x7] = core->portIn[0]; break;
-						case 2: core->registers[0x7] = core->portIn[1]; break; 
-						case 3:	core->registers[0x7] = ((x << 8) | y) >> (8 - offset); break;
-						default: cout << +core->loc << endl; break;
-					}
-				} else if(core->opcode == 0xd3) { //game output
-					switch(core->loc) {
-						case 2: offset = core->portOut[0] & 0x7; break;
-						case 4: y = x; x = core->portOut[2]; break;
-						case 3: 
-							core->soundB = (core->portOut[1] & 0x20) != 0;
-							// if(core->soundB) {
-							// 	if((core->portOut[1] & 0x1) != 0)
-							// 		Mix_PlayChannel(-1, wav1, 0);
-							// 	if((core->portOut[1] & 0x2) != 0)
-							// 		Mix_PlayChannel(-1, wav2, 0);
-							// 	if((core->portOut[1] & 0x4) != 0)
-							// 		Mix_PlayChannel(-1, wav3, 0);
-							// 	if((core->portOut[1] & 0x8) != 0)
-							// 		Mix_PlayChannel(-1, wav4, 0);
-							// 	if((core->portOut[1] & 0x10) != 0)
-							// 		Mix_PlayChannel(-1, wav5, 0);
-							// }
-						break;
-						case 5:
-							// if(core->soundB) {
-							// 	if((core->portOut[3] & 0x1) != 0)
-							// 		Mix_PlayChannel(-1, wav6, 0);
-							// 	if((core->portOut[3] & 0x2) != 0)
-							// 		Mix_PlayChannel(-1, wav7, 0);
-							// 	if((core->portOut[3] & 0x4) != 0)
-							// 		Mix_PlayChannel(-1, wav8, 0);
-							// 	if((core->portOut[3] & 0x8) != 0)
-							// 		Mix_PlayChannel(-1, wav9, 0);
-							// 	if((core->portOut[3] & 0x10) != 0)
-							// 		Mix_PlayChannel(-1, wav10, 0);
-							// }
-						break;
-
-						case 6: break; //writes A to this port, debug thing?
-						default: cout << +core->loc << endl; break;
-					}
-				}
-
-				cycCount += core->cycles - core->cycBefore;
-				if(core->cycles >= everyHalfCPF) {
-					if(core->interruptB && !core->cpmB) {
-						uint16_t pctmp = core->pc -= 3;
-						uint8_t optmp = core->memory[pctmp];
-						core->memory[pctmp] = ((vInterrupt) ? 0xcf : 0xd7);
+				while(cycCount <= cycPerFrame) {
+					if(core->hltB)
+						core->cycles += 4;
+					else
 						core->emulateCycle();
-						core->memory[pctmp] = optmp;
-						core->cycles -= 11;
+
+					if(core->opcode == 0xdb) { //game input
+						switch(core->loc) {
+							case 1: core->registers[0x7] = core->portIn[0]; break;
+							case 2: core->registers[0x7] = core->portIn[1]; break; 
+							case 3:	core->registers[0x7] = ((x << 8) | y) >> (8 - offset); break;
+							default: cout << +core->loc << endl; break;
+						}
+					} else if(core->opcode == 0xd3) { //game output
+						switch(core->loc) {
+							case 2: offset = core->portOut[0] & 0x7; break;
+							case 4: y = x; x = core->portOut[2]; break;
+							case 3: 
+								core->soundB = (core->portOut[1] & 0x20) != 0;
+								// if(core->soundB) {
+								// 	if((core->portOut[1] & 0x1) != 0)
+								// 		Mix_PlayChannel(-1, wav1, 0);
+								// 	if((core->portOut[1] & 0x2) != 0)
+								// 		Mix_PlayChannel(-1, wav2, 0);
+								// 	if((core->portOut[1] & 0x4) != 0)
+								// 		Mix_PlayChannel(-1, wav3, 0);
+								// 	if((core->portOut[1] & 0x8) != 0)
+								// 		Mix_PlayChannel(-1, wav4, 0);
+								// 	if((core->portOut[1] & 0x10) != 0)
+								// 		Mix_PlayChannel(-1, wav5, 0);
+								// }
+							break;
+							case 5:
+								// if(core->soundB) {
+								// 	if((core->portOut[3] & 0x1) != 0)
+								// 		Mix_PlayChannel(-1, wav6, 0);
+								// 	if((core->portOut[3] & 0x2) != 0)
+								// 		Mix_PlayChannel(-1, wav7, 0);
+								// 	if((core->portOut[3] & 0x4) != 0)
+								// 		Mix_PlayChannel(-1, wav8, 0);
+								// 	if((core->portOut[3] & 0x8) != 0)
+								// 		Mix_PlayChannel(-1, wav9, 0);
+								// 	if((core->portOut[3] & 0x10) != 0)
+								// 		Mix_PlayChannel(-1, wav10, 0);
+								// }
+							break;
+
+							case 6: break; //writes A to this port, debug thing?
+							default: cout << +core->loc << endl; break;
+						}
 					}
-					core->cycles -= CLOCK/(fpsI*2);
-					vInterrupt = !vInterrupt;
+
+					cycCount += core->cycles - core->cycBefore;
+					if(core->cycles >= everyHalfCPF) {
+						if(core->interruptB) {
+							uint16_t pctmp = core->pc -= 3;
+							uint8_t optmp = core->memory[pctmp];
+							core->memory[pctmp] = ((vInterrupt) ? 0xcf : 0xd7);
+							core->emulateCycle();
+							core->memory[pctmp] = optmp;
+							core->cycles -= 11;
+						}
+						core->cycles -= CLOCK/(fpsI*2);
+						vInterrupt = !vInterrupt;
+					}
 				}
+
+				SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
+				SDL_RenderCopy(renderer, texture, NULL, NULL);
+				SDL_RenderPresent(renderer);
 			}
-			
-			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
-			SDL_RenderCopy(renderer, texture, NULL, NULL);
-			SDL_RenderPresent(renderer);
 		}
 	}
 
