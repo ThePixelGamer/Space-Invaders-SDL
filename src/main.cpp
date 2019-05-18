@@ -153,16 +153,16 @@ int main(int argc, char* args[]) {
 					}
 				}
 			}
+
+			// SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
+			// SDL_RenderCopy(renderer, texture, NULL, NULL);
+			// SDL_RenderPresent(renderer);
 		}
 
 		if(core->cpmB) {		
 			if(!core->hltB)
 				core->emulateCycle();
 		}
-
-		// SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
-		// SDL_RenderCopy(renderer, texture, NULL, NULL);
-		// SDL_RenderPresent(renderer);
 	}
 
 	if(core->cpmB)
