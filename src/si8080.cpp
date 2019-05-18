@@ -113,11 +113,14 @@ void si8080::dcx() {
 
 void si8080::inr() {
 	uint8_t reg = (opcode >> 3) & 0x7;
+	bool c = cy;
 
 	if(reg == 0x6)
 		changeM(setCond(memory[loc] + 1, memory[loc], 1));
 	else
 		registers[reg] = setCond(registers[reg] + 1, registers[reg], 1);
+		
+	cy = c;
 } 
 
 void si8080::dcr() {
@@ -172,6 +175,7 @@ void si8080::daa() {
     uint8_t lsb = registers[A] & 0xf;
     uint8_t msb = registers[A] >> 4;
 	uint8_t total = 0;
+	bool c = cy; //cy backup
 
     if (ac || lsb > 9) {
     	total += 0x6;
@@ -179,8 +183,9 @@ void si8080::daa() {
     if (cy || msb > 9 || (msb >= 9 && lsb > 9)) {
     	total += 0x60;
 	}
-	
+
     registers[A] = setCond(registers[A] + total, registers[A], total);
+	cy = (c) ? c : cy;
 }
 
 void si8080::shld() {
@@ -252,10 +257,19 @@ void si8080::math() {
 
 	switch((opcode >> 3) & 0x7) {
 		case 0x7:	setCond(registers[A] - data, registers[A], (~data + 1)); break;
-		case 0x0: 	registers[A] = setCond(registers[A] + data, registers[A], data); break;
-		case 0x1: 	registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy)); break;
-		case 0x2: 	registers[A] = setCond(registers[A] - data, registers[A], (~data + 1)); break;
-		case 0x3: 	registers[A] = setCond(registers[A] - data - cy, registers[A], (~(data + cy) + 1)); break;
+		case 0x0:	registers[A] = setCond(registers[A] + data, registers[A], data); break;
+		case 0x1:{ 	uint8_t actmp = ((registers[A] ^ data ^ cy ^ ((uint8_t)registers[A] + data + cy)) & 0x10) == 0x10; 
+					registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy));
+					ac = actmp;
+		} break;
+		case 0x2:	registers[A] = setCond(registers[A] + (~data + 1), registers[A], (~data + 1));
+					cy = !cy;
+		break;
+		case 0x3:{ 	uint8_t actmp = ((registers[A] ^ data ^ cy ^ ((uint8_t)registers[A] - data - cy)) & 0x10) == 0x10;
+					registers[A] = setCond(registers[A] + (~(data + cy) + 1), registers[A], (~(data + cy) + 1));
+					ac = actmp;
+					cy = !cy;
+		} break;
 		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, 0, 0);
 				  	ac = ((registers[A] | data) & 0x8) != 0;
 				  	cy = 0;
@@ -275,11 +289,11 @@ void si8080::pop() { //11 rp(2) 0001
 
 	if(reg == 0x6) {
 		uint8_t flags = memory[sp];
-		cy = flags & 0x1;
-		ac = (flags & 0x10) >> 4;
-		s  = (flags & 0x80) >> 7;
-		z  = (flags & 0x40) >> 6;
-		p  = (flags & 0x4) >> 2;
+		s  = ((flags & 0x80) != 0);
+		z  = ((flags & 0x40) != 0);
+		ac = ((flags & 0x10) != 0);
+		p  = ((flags &  0x4) != 0);
+		cy = ((flags &  0x1) != 0);
 		registers[A] = memory[sp+1];
 	} else {
 		registers[reg+1] = memory[sp];
@@ -409,7 +423,7 @@ void si8080::cpm() {
 }
 
 void si8080::end() { //warm boot
-	hlt();
+	runB = false;
 }
 
 void si8080::changeM(uint8_t value) { //it was getting in the way tbh
@@ -480,8 +494,8 @@ uint8_t si8080::setCond(uint16_t ans, uint8_t old, uint8_t diff) {
 	return (ans & 0xff);
 }
 
-void si8080::load(const char* filename) {
-	FILE* rom = fopen(filename, "rb");
+void si8080::load(string filename) {
+	FILE* rom = fopen(filename.c_str(), "rb");
 	if (rom == NULL) {
 		fputs("File error", stderr); 
 	} else {
@@ -508,6 +522,8 @@ void si8080::load(const char* filename) {
 					memory[0x5] = 0x20; //cpm call
 					memory[0x6] = tmp & 0xff; //ram end lsb
 					memory[0x7] = tmp >> 8; //ram end msb
+					
+					cpmPrint = fopen((filename + ".log").c_str(), "w");
 				}
 
 				tmp += 0x1C00;

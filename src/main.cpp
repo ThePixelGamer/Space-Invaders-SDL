@@ -27,13 +27,13 @@ SDL_DisplayMode dm;
 // Mix_Chunk		*wav1, *wav2, *wav3, *wav4, *wav5, *wav6, *wav7, *wav8, *wav9, *wav10;
 
 si8080* core = new si8080();
-bool run = true, vInterrupt = true;
+bool vInterrupt = true;
 uint8_t port1 = 0b1000, port2 = 0b1000, x, y, offset;
 uint32_t cycCount = 0, fpsI = 60;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 	SDL_GetCurrentDisplayMode(0, &dm);
 
 	window = SDL_CreateWindow("Space Invaders", (dm.w/2)-(SCREEN_WIDTH/2), (dm.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH*2, SCREEN_HEIGHT*2, SDL_WINDOW_RESIZABLE);
@@ -55,11 +55,10 @@ int main(int argc, char* args[]) {
 
 	if(argc > 1) {
 		core->cpmB = true;
-		core->debugB = false;
+		core->runB = true;
 		core->load(args[1]);
 	} else {
 		core->cpmB = false;
-		core->debugB = false;
 		core->load("invaders.com");
 	}
 
@@ -72,34 +71,21 @@ int main(int argc, char* args[]) {
 
 	time_point<steady_clock> fpsTimer(steady_clock::now());
 	frame fps{};
-	while(run) {
-		if(core->cpmB) {
-			fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
-			if(fps.count() >= 60) { //run input every 10 frames
-				fpsTimer = steady_clock::now();
+	while(core->runB) {
+		fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
+		if(fps.count() >= 1) {
+			fpsTimer = steady_clock::now();
+			cycCount = 0;
 
-				if(SDL_PollEvent(&event)) { //user input
-					switch(event.type) {
-						case SDL_KEYDOWN: keyboard(true); break;
-					}
-				}
+			while(SDL_PollEvent(&event) != 0) { //user input
+				// switch(event.type) {
+				// 	case SDL_QUIT: core->runB = false; break;
+				// 	case SDL_KEYDOWN: keyboard(true); break;
+				// 	case SDL_KEYUP: keyboard(false); break;
+				// }
 			}
 
-			if(!core->hltB)
-				core->emulateCycle();
-		} else {
-			fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
-			if(fps.count() >= 1) {
-				fpsTimer = steady_clock::now();
-				cycCount = 0;
-
-				if(SDL_PollEvent(&event)) { //user input
-					switch(event.type) {
-						case SDL_KEYDOWN: keyboard(true); break;
-						case SDL_KEYUP: keyboard(false); break;
-					}
-				}
-
+			if(!core->cpmB) {
 				while(cycCount <= cycPerFrame) {
 					if(core->hltB)
 						core->cycles += 4;
@@ -166,13 +152,21 @@ int main(int argc, char* args[]) {
 						vInterrupt = !vInterrupt;
 					}
 				}
-
-				SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
-				SDL_RenderCopy(renderer, texture, NULL, NULL);
-				SDL_RenderPresent(renderer);
 			}
 		}
+
+		if(core->cpmB) {		
+			if(!core->hltB)
+				core->emulateCycle();
+		}
+
+		// SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
+		// SDL_RenderCopy(renderer, texture, NULL, NULL);
+		// SDL_RenderPresent(renderer);
 	}
+
+	if(core->cpmB)
+		fclose(core->cpmPrint);
 
 	if(core->debugB)
 		fclose(core->log); 
@@ -198,7 +192,7 @@ void keyboard(bool press) {
 	const Uint8* state = SDL_GetKeyboardState(NULL);
 
 	if(press) {
-		if(state[SDL_SCANCODE_ESCAPE]) 	run = false;
+		if(state[SDL_SCANCODE_ESCAPE]) 	core->runB = false;
 		if(state[SDL_SCANCODE_R]) 		SDL_SetWindowSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
 		if(state[SDL_SCANCODE_C]) 		core->portIn[0] |= 0b0001; 		//Coin Deposit :D
 		if(state[SDL_SCANCODE_1]) 		core->portIn[0] |= 0b0100; 		//Player1 Start

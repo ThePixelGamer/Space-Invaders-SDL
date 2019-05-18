@@ -14,19 +14,19 @@ using namespace std;
 class si8080 {
 public:
     vector<uint8_t> memory;
-    bool            cy, ac, z, p, s;
-    uint8_t         opcode, registers[8], interruptB, hltB, soundB, cpmB, debugB, portOut[5], portIn[3];
+    bool            cy, ac, z, p, s, interruptB, hltB, soundB, cpmB, debugB, runB;
+    uint8_t         opcode, registers[8], portOut[5], portIn[3];
     uint16_t        pc, sp, loc, cycles, cycBefore;
     uint32_t        romSize, vramStart;
 
-    FILE*           log;
+    FILE            *log, *cpmPrint;
     uint8_t*        pixels; //duplicate of vram but in 24 rgb format
 
     void            emulateCycle();
     bool            checkCond();
     uint8_t         setCond(uint16_t, uint8_t, uint8_t);
     void            changeM(uint8_t);
-    void            load(const char*);
+    void            load(string);
 
     void            end();
     void            cpm();
