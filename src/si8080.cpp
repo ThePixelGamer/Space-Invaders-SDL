@@ -559,4 +559,6 @@ void si8080::load(string filename) {
 
 	if(debugB)
 		log = fopen("log.txt", "w");
+
+	runB = true;
 }

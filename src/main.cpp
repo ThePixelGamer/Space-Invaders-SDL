@@ -55,16 +55,11 @@ int main(int argc, char* args[]) {
 
 	if(argc > 1) {
 		core->cpmB = true;
-		core->runB = true;
 		core->load(args[1]);
 	} else {
 		core->cpmB = false;
 		core->load("invaders.com");
 	}
-
-	SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
-	SDL_RenderCopy(renderer, texture, NULL, NULL);
-	SDL_RenderPresent(renderer);
 
 	double cycPerFrame = round((double)CLOCK / fpsI);
 	double everyHalfCPF = round((double)CLOCK / (fpsI * 2));
@@ -77,12 +72,12 @@ int main(int argc, char* args[]) {
 			fpsTimer = steady_clock::now();
 			cycCount = 0;
 
-			while(SDL_PollEvent(&event) != 0) { //user input
-				// switch(event.type) {
-				// 	case SDL_QUIT: core->runB = false; break;
-				// 	case SDL_KEYDOWN: keyboard(true); break;
-				// 	case SDL_KEYUP: keyboard(false); break;
-				// }
+			while(SDL_PollEvent(&event)) { //user input
+				switch(event.type) {
+					//case SDL_QUIT: core->runB = false; break;
+					case SDL_KEYDOWN: keyboard(true); break;
+					case SDL_KEYUP: keyboard(false); break;
+				}
 			}
 
 			if(!core->cpmB) {
@@ -148,20 +143,27 @@ int main(int argc, char* args[]) {
 							core->memory[pctmp] = optmp;
 							core->cycles -= 11;
 						}
-						core->cycles -= CLOCK/(fpsI*2);
+						core->cycles -= everyHalfCPF;
 						vInterrupt = !vInterrupt;
 					}
 				}
 			}
 
-			// SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
-			// SDL_RenderCopy(renderer, texture, NULL, NULL);
-			// SDL_RenderPresent(renderer);
+			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
+			SDL_RenderPresent(renderer);
 		}
 
-		if(core->cpmB) {		
-			if(!core->hltB)
-				core->emulateCycle();
+		if(core->cpmB) {
+			while(cycCount <= 3000000000) {
+				if(core->hltB)
+					core->cycles += 4;
+				else
+					core->emulateCycle();
+
+				cycCount += core->cycles - core->cycBefore;
+				(core->cycles >= everyHalfCPF) ? core->cycles -= everyHalfCPF : 0;
+			}
 		}
 	}
 
