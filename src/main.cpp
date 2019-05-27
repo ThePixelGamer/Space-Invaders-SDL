@@ -2,12 +2,11 @@
 #include "SDL2/SDL_video.h"
 #include "SDL2/SDL_mixer.h"
 
-#include <unistd.h>
-#include <algorithm>
-#include <iostream>
+//needs iostream or some parts but it's already included from si8080 so... :P
 #include <chrono>
-#include <cstdint>
 #include <cmath>
+#include <conio.h>
+#include <windows.h>
 
 #include "si8080.h"
 
@@ -15,16 +14,15 @@ using namespace chrono;
 using frame = duration<int32_t, ratio<1, 60>>; 
 using ms = duration<float, milli>; 
 
-#define SCREEN_HEIGHT 256
-#define SCREEN_WIDTH 224
-#define CLOCK 2000000
+constexpr auto SCREEN_HEIGHT = 256;
+constexpr auto SCREEN_WIDTH = 224;
+constexpr auto CLOCK = 2000000;
 
 SDL_Window*		window;
 SDL_Renderer*	renderer;
 SDL_Texture*	texture;
 SDL_Event		event;
 SDL_DisplayMode dm;
-// Mix_Chunk		*wav1, *wav2, *wav3, *wav4, *wav5, *wav6, *wav7, *wav8, *wav9, *wav10;
 
 si8080* core = new si8080();
 bool vInterrupt = true;
@@ -33,54 +31,53 @@ uint32_t cycCount = 0, fpsI = 60;
 
 void keyboard(bool);
 int main(int argc, char* args[]) {
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
-	SDL_GetCurrentDisplayMode(0, &dm);
-
-	window = SDL_CreateWindow("Space Invaders", (dm.w/2)-(SCREEN_WIDTH/2), (dm.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH*2, SCREEN_HEIGHT*2, SDL_WINDOW_RESIZABLE);
-	renderer = SDL_CreateRenderer(window, -1, 0);
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-	// Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 640);
-	// Mix_Volume(-1, MIX_MAX_VOLUME/8);
-	// wav1 = Mix_LoadWAV("./sounds/spaceship_move.wav");	
-	// wav2 = Mix_LoadWAV("./sounds/player_shot.wav");
-	// wav3 = Mix_LoadWAV("./sounds/player_hit.wav");
-	// wav4 = Mix_LoadWAV("./sounds/invaders_hit.wav");
-	// wav5 = Mix_LoadWAV("./sounds/spaceship_hit.wav");
-	// wav6 = Mix_LoadWAV("./sounds/invaders_move1.wav");
-	// wav7 = Mix_LoadWAV("./sounds/invaders_move2.wav");
-	// wav8 = Mix_LoadWAV("./sounds/invaders_move3.wav");
-	// wav9 = Mix_LoadWAV("./sounds/invaders_move4.wav");
-	// wav10 = Mix_LoadWAV("./sounds/spaceship_hit.wav"); //extra life
-
 	if(argc > 1) {
+		AllocConsole();
+		freopen("CONIN$", "r", stdin);
+		freopen("CONOUT$", "w", stdout);
+
 		core->cpmB = true;
 		core->load(args[1]);
+
+		while(core->runB) {
+			core->emulateCycle();
+		}
+
+		printf("\n\nPress any key to continue...");
+		getch();
+
+		fclose(core->cpmPrint);
+		fclose(core->log);
+		FreeConsole();
 	} else {
 		core->cpmB = false;
 		core->load("invaders.com");
-	}
 
-	double cycPerFrame = round((double)CLOCK / fpsI);
-	double everyHalfCPF = round((double)CLOCK / (fpsI * 2));
+		SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+		SDL_GetCurrentDisplayMode(0, &dm);
 
-	time_point<steady_clock> fpsTimer(steady_clock::now());
-	frame fps{};
-	while(core->runB) {
-		fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
-		if(fps.count() >= 1) {
-			fpsTimer = steady_clock::now();
-			cycCount = 0;
+		window = SDL_CreateWindow("Space Invaders", (dm.w/2)-(SCREEN_WIDTH/2), (dm.h/2)-(SCREEN_HEIGHT/2), SCREEN_WIDTH*2, SCREEN_HEIGHT*2, SDL_WINDOW_RESIZABLE);
+		renderer = SDL_CreateRenderer(window, -1, 0);
+		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+		double cycPerFrame = round((double)CLOCK / fpsI);
+		double everyHalfCPF = round((double)CLOCK / (fpsI * 2));
 
-			while(SDL_PollEvent(&event)) { //user input
-				switch(event.type) {
-					//case SDL_QUIT: core->runB = false; break;
-					case SDL_KEYDOWN: keyboard(true); break;
-					case SDL_KEYUP: keyboard(false); break;
+		time_point<steady_clock> fpsTimer(steady_clock::now());
+		frame fps{};
+		while(core->runB) {
+			fps = duration_cast<frame>(steady_clock::now() - fpsTimer);
+			if(fps.count() >= 1) {
+				fpsTimer = steady_clock::now();
+				cycCount = 0;
+
+				while(SDL_PollEvent(&event)) { //user input
+					switch(event.type) {
+						case SDL_QUIT: core->runB = false; break;
+						case SDL_KEYDOWN: keyboard(true); break;
+						case SDL_KEYUP: keyboard(false); break;
+					}
 				}
-			}
 
-			if(!core->cpmB) {
 				while(cycCount <= cycPerFrame) {
 					if(core->hltB)
 						core->cycles += 4;
@@ -100,32 +97,8 @@ int main(int argc, char* args[]) {
 							case 4: y = x; x = core->portOut[2]; break;
 							case 3: 
 								core->soundB = (core->portOut[1] & 0x20) != 0;
-								// if(core->soundB) {
-								// 	if((core->portOut[1] & 0x1) != 0)
-								// 		Mix_PlayChannel(-1, wav1, 0);
-								// 	if((core->portOut[1] & 0x2) != 0)
-								// 		Mix_PlayChannel(-1, wav2, 0);
-								// 	if((core->portOut[1] & 0x4) != 0)
-								// 		Mix_PlayChannel(-1, wav3, 0);
-								// 	if((core->portOut[1] & 0x8) != 0)
-								// 		Mix_PlayChannel(-1, wav4, 0);
-								// 	if((core->portOut[1] & 0x10) != 0)
-								// 		Mix_PlayChannel(-1, wav5, 0);
-								// }
 							break;
 							case 5:
-								// if(core->soundB) {
-								// 	if((core->portOut[3] & 0x1) != 0)
-								// 		Mix_PlayChannel(-1, wav6, 0);
-								// 	if((core->portOut[3] & 0x2) != 0)
-								// 		Mix_PlayChannel(-1, wav7, 0);
-								// 	if((core->portOut[3] & 0x4) != 0)
-								// 		Mix_PlayChannel(-1, wav8, 0);
-								// 	if((core->portOut[3] & 0x8) != 0)
-								// 		Mix_PlayChannel(-1, wav9, 0);
-								// 	if((core->portOut[3] & 0x10) != 0)
-								// 		Mix_PlayChannel(-1, wav10, 0);
-								// }
 							break;
 
 							case 6: break; //writes A to this port, debug thing?
@@ -147,46 +120,19 @@ int main(int argc, char* args[]) {
 						vInterrupt = !vInterrupt;
 					}
 				}
-			}
 
-			SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
-			SDL_RenderCopy(renderer, texture, NULL, NULL);
-			SDL_RenderPresent(renderer);
-		}
-
-		if(core->cpmB) {
-			while(cycCount <= 3000000000) {
-				if(core->hltB)
-					core->cycles += 4;
-				else
-					core->emulateCycle();
-
-				cycCount += core->cycles - core->cycBefore;
-				(core->cycles >= everyHalfCPF) ? core->cycles -= everyHalfCPF : 0;
+				SDL_UpdateTexture(texture, NULL, core->pixels, SCREEN_WIDTH * sizeof(uint8_t) * 3);
+				SDL_RenderCopy(renderer, texture, NULL, NULL);
+				SDL_RenderPresent(renderer);
 			}
 		}
-	}
+			
+		SDL_DestroyTexture(texture);
+		SDL_DestroyRenderer(renderer);
+		SDL_DestroyWindow(window); 
+		SDL_Quit(); 
+	}	
 
-	if(core->cpmB)
-		fclose(core->cpmPrint);
-
-	if(core->debugB)
-		fclose(core->log); 
-
-	// Mix_FreeChunk(wav1);
-	// Mix_FreeChunk(wav2);
-	// Mix_FreeChunk(wav3);
-	// Mix_FreeChunk(wav4);
-	// Mix_FreeChunk(wav5);
-	// Mix_FreeChunk(wav6);
-	// Mix_FreeChunk(wav7);
-	// Mix_FreeChunk(wav8);
-	// Mix_FreeChunk(wav9);
-	// Mix_FreeChunk(wav10);
-	SDL_DestroyTexture(texture);
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(window); 
-	SDL_Quit(); 
 	return 0;   
 }
 

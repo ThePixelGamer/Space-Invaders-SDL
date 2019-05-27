@@ -1,12 +1,12 @@
 #include "si8080.h"
 
-#define A 0x7
-#define B 0x0
-#define C 0x1
-#define D 0x2
-#define E 0x3
-#define H 0x4
-#define L 0x5
+constexpr auto A = 0x7;
+constexpr auto B = 0x0;
+constexpr auto C = 0x1;
+constexpr auto D = 0x2;
+constexpr auto E = 0x3;
+constexpr auto H = 0x4;
+constexpr auto L = 0x5;
 
 constexpr void (si8080::*si8080::opcodeTable[256])();
 int cyclesTable[256] = {
@@ -263,12 +263,12 @@ void si8080::math() {
 					ac = actmp;
 		} break;
 		case 0x2:	registers[A] = setCond(registers[A] + (~data + 1), registers[A], (~data + 1));
-					cy = !cy;
+					//cy = !cy;
 		break;
 		case 0x3:{ 	uint8_t actmp = ((registers[A] ^ data ^ cy ^ ((uint8_t)registers[A] - data - cy)) & 0x10) == 0x10;
 					registers[A] = setCond(registers[A] + (~(data + cy) + 1), registers[A], (~(data + cy) + 1));
 					ac = actmp;
-					cy = !cy;
+					//cy = !cy;
 		} break;
 		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, 0, 0);
 				  	ac = ((registers[A] | data) & 0x8) != 0;

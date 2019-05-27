@@ -3,10 +3,6 @@
 #include "SDL2/SDL.h"
 
 #include <iostream>
-#include <iomanip>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <vector>
 
 using namespace std;
