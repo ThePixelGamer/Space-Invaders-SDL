@@ -68,7 +68,11 @@ int main(int argc, char* args[]) {
 				fpsTimer = steady_clock::now();
 				cycCount = 0;
 
-				while(SDL_PollEvent(&event)) { switch(event.type) {} }
+				while(SDL_PollEvent(&event)) { 
+					switch(event.type) {
+						case SDL_QUIT: core->runB = false; break;
+					}
+				}
 
 				state = SDL_GetKeyboardState(NULL);
 
@@ -111,7 +115,8 @@ int main(int argc, char* args[]) {
 						}
 					}
 
-					if((core->cycles += core->cycles - core->cycBefore) >= everyHalfCPF) {
+					cycCount += core->cycles - core->cycBefore;
+					if(core->cycles >= everyHalfCPF) {
 						if(core->interruptB) {
 							uint16_t pctmp = core->pc -= 3;
 							uint8_t optmp = core->memory[pctmp];
