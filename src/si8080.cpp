@@ -245,7 +245,7 @@ void si8080::mov() {
 
 void si8080::hlt() {
 	hltB = true;
-}
+} 
 
 void si8080::math() {
 	uint8_t data = registers[opcode & 0x7];
@@ -256,20 +256,11 @@ void si8080::math() {
 		data = memory[loc];
 
 	switch((opcode >> 3) & 0x7) {
-		case 0x7:	setCond(registers[A] - data, registers[A], (~data + 1)); break;
+		case 0x7:	setCond(registers[A] + (uint8_t)(~data) + 1, registers[A], (uint8_t)(~data)); cy = !cy; break;
 		case 0x0:	registers[A] = setCond(registers[A] + data, registers[A], data); break;
-		case 0x1:{ 	uint8_t actmp = ((registers[A] ^ data ^ cy ^ ((uint8_t)registers[A] + data + cy)) & 0x10) == 0x10; 
-					registers[A] = setCond(registers[A] + (data + cy), registers[A], (data + cy));
-					ac = actmp;
-		} break;
-		case 0x2:	registers[A] = setCond(registers[A] + (~data + 1), registers[A], (~data + 1));
-					//cy = !cy;
-		break;
-		case 0x3:{ 	uint8_t actmp = ((registers[A] ^ data ^ cy ^ ((uint8_t)registers[A] - data - cy)) & 0x10) == 0x10;
-					registers[A] = setCond(registers[A] + (~(data + cy) + 1), registers[A], (~(data + cy) + 1));
-					ac = actmp;
-					//cy = !cy;
-		} break;
+		case 0x1: 	registers[A] = setCond(registers[A] + data + cy, registers[A], data); break;
+		case 0x2:	registers[A] = setCond(registers[A] + (uint8_t)(~data) + 1, registers[A], (uint8_t)(~data)); cy = !cy; break;
+		case 0x3:	registers[A] = setCond(registers[A] + (uint8_t)(~data) + !cy, registers[A], (uint8_t)(~data)); cy = !cy; break;
 		case 0x4:{  uint8_t tmp = setCond(registers[A] & data, 0, 0);
 				  	ac = ((registers[A] | data) & 0x8) != 0;
 				  	cy = 0;
